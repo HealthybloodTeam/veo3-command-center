@@ -1,0 +1,948 @@
+<!--
+  VEO 3 Command Center — GemPages Embed
+  GenAIPro API v2 via Render Proxy
+
+  HOW TO USE IN GEMPAGES:
+  1. Deploy the server to Render (see render.yaml)
+  2. Update PROXY_URL below with your Render URL
+  3. Add a "Custom HTML" element in GemPages editor
+  4. Paste this entire code block
+  5. Save & publish
+-->
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+<div id="veo3-app"></div>
+
+<style>
+  /* ===== NUKE SHOPIFY CHROME ===== */
+  .gp-header, .gp-footer,
+  header, footer,
+  .shopify-section-header, .shopify-section-footer,
+  #shopify-section-header, #shopify-section-footer,
+  .announcement-bar, .header-wrapper, .footer,
+  .site-header, .site-footer, .main-header,
+  [data-section-type="header"], [data-section-type="footer"] {
+    display: none !important;
+    visibility: hidden !important;
+    height: 0 !important;
+    overflow: hidden !important;
+  }
+
+  body {
+    background: #07070c !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* ===== ROOT ===== */
+  #veo3-app {
+    font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+    background: #07070c !important;
+    color: #e8e8f0 !important;
+    border-radius: 0 !important;
+    overflow: hidden !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: 100vh !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    position: relative !important;
+    line-height: 1.5 !important;
+    -webkit-font-smoothing: antialiased !important;
+  }
+  #veo3-app * {
+    box-sizing: border-box !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+  }
+
+  /* ===== HEADER ===== */
+  .v3-header {
+    background: linear-gradient(180deg, #0f0f18 0%, #07070c 100%) !important;
+    padding: 24px 32px !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 16px !important;
+    border-bottom: 1px solid rgba(255,255,255,0.06) !important;
+    flex-wrap: wrap !important;
+  }
+  .v3-logo {
+    width: 56px !important; height: 56px !important;
+    background: linear-gradient(135deg, #f59e0b 0%, #f97316 50%, #ea580c 100%) !important;
+    border-radius: 14px !important;
+    display: flex !important; align-items: center !important; justify-content: center !important;
+    font-weight: 900 !important; font-size: 20px !important; color: #000 !important;
+    flex-shrink: 0 !important;
+    box-shadow: 0 4px 20px rgba(245,158,11,0.25) !important;
+  }
+  .v3-hdr-text { display: flex !important; flex-direction: column !important; gap: 2px !important; }
+  .v3-title {
+    font-size: 26px !important; font-weight: 900 !important;
+    letter-spacing: 4px !important; color: #fff !important;
+  }
+  .v3-subtitle {
+    font-size: 11px !important; color: #555570 !important;
+    text-transform: uppercase !important; letter-spacing: 3px !important;
+  }
+  .v3-credits-badge {
+    margin-left: auto !important;
+    background: rgba(245,158,11,0.08) !important;
+    border: 1px solid rgba(245,158,11,0.2) !important;
+    border-radius: 12px !important;
+    padding: 10px 20px !important;
+    text-align: center !important;
+    flex-shrink: 0 !important;
+  }
+  .v3-credits-num {
+    font-size: 22px !important; font-weight: 800 !important;
+    color: #f59e0b !important; display: block !important; line-height: 1.2 !important;
+  }
+  .v3-credits-lbl {
+    font-size: 9px !important; color: #666680 !important;
+    text-transform: uppercase !important; letter-spacing: 1.5px !important;
+    display: block !important;
+  }
+
+  /* ===== TABS ===== */
+  .v3-tabs {
+    display: flex !important;
+    border-bottom: 1px solid rgba(255,255,255,0.06) !important;
+    background: #0a0a12 !important;
+    padding: 0 24px !important;
+    gap: 4px !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+  .v3-tab {
+    flex: 1 !important;
+    padding: 18px 12px !important;
+    text-align: center !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    color: #444460 !important;
+    cursor: pointer !important;
+    border: none !important;
+    background: transparent !important;
+    transition: all 0.2s !important;
+    border-bottom: 3px solid transparent !important;
+    letter-spacing: 0.3px !important;
+    white-space: nowrap !important;
+  }
+  .v3-tab:hover { color: #b0b0c8 !important; background: rgba(255,255,255,0.02) !important; }
+  .v3-tab.active {
+    color: #f59e0b !important;
+    border-bottom-color: #f59e0b !important;
+    background: rgba(245,158,11,0.04) !important;
+  }
+
+  /* ===== BODY ===== */
+  .v3-body {
+    padding: 40px 32px !important;
+    min-height: 500px !important;
+    max-width: 900px !important;
+    margin: 0 auto !important;
+  }
+
+  /* ===== FIELDS ===== */
+  .v3-field { margin-bottom: 24px !important; }
+  .v3-label {
+    display: block !important;
+    font-size: 11px !important;
+    font-weight: 700 !important;
+    color: #555570 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 1.5px !important;
+    margin-bottom: 10px !important;
+  }
+
+  .v3-textarea, .v3-input, .v3-select {
+    width: 100% !important;
+    background: #0e0e16 !important;
+    border: 1px solid rgba(255,255,255,0.08) !important;
+    border-radius: 12px !important;
+    padding: 16px 18px !important;
+    color: #e8e8f0 !important;
+    font-size: 15px !important;
+    transition: border-color 0.2s, box-shadow 0.2s !important;
+    outline: none !important;
+  }
+  .v3-textarea {
+    resize: vertical !important;
+    min-height: 130px !important;
+    line-height: 1.6 !important;
+  }
+  .v3-textarea:focus, .v3-input:focus, .v3-select:focus {
+    outline: none !important;
+    border-color: rgba(245,158,11,0.5) !important;
+    box-shadow: 0 0 0 3px rgba(245,158,11,0.1) !important;
+  }
+  .v3-textarea::placeholder, .v3-input::placeholder { color: #3a3a50 !important; }
+
+  .v3-select {
+    cursor: pointer !important;
+    appearance: none !important;
+    -webkit-appearance: none !important;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23555570' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E") !important;
+    background-repeat: no-repeat !important;
+    background-position: right 16px center !important;
+    padding-right: 40px !important;
+    background-color: #0e0e16 !important;
+  }
+  .v3-select option { background: #0e0e16 !important; color: #e8e8f0 !important; }
+
+  .v3-row {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 20px !important;
+    margin-bottom: 24px !important;
+  }
+  .v3-row-3 {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr 1fr !important;
+    gap: 16px !important;
+    margin-bottom: 24px !important;
+  }
+
+  /* ===== API KEY ===== */
+  .v3-key-section {
+    background: linear-gradient(135deg, rgba(245,158,11,0.04) 0%, rgba(249,115,22,0.02) 100%) !important;
+    border: 1px solid rgba(245,158,11,0.12) !important;
+    border-radius: 16px !important;
+    padding: 24px !important;
+    margin-bottom: 32px !important;
+  }
+  .v3-key-row { display: flex !important; gap: 10px !important; }
+  .v3-key-input {
+    flex: 1 !important;
+    background: rgba(0,0,0,0.3) !important;
+    border: 1px solid rgba(255,255,255,0.08) !important;
+    border-radius: 12px !important;
+    padding: 14px 18px !important;
+    color: #e8e8f0 !important;
+    font-size: 13px !important;
+    font-family: "SF Mono", "Fira Code", "Courier New", monospace !important;
+    outline: none !important;
+  }
+  .v3-key-input:focus {
+    outline: none !important;
+    border-color: rgba(245,158,11,0.5) !important;
+    box-shadow: 0 0 0 3px rgba(245,158,11,0.1) !important;
+  }
+  .v3-key-input::placeholder { color: #3a3a50 !important; }
+  .v3-key-toggle {
+    background: rgba(255,255,255,0.04) !important;
+    border: 1px solid rgba(255,255,255,0.08) !important;
+    border-radius: 12px !important;
+    padding: 14px 20px !important;
+    color: #666680 !important;
+    font-size: 13px !important;
+    cursor: pointer !important;
+    font-weight: 600 !important;
+    white-space: nowrap !important;
+    transition: all 0.2s !important;
+  }
+  .v3-key-toggle:hover {
+    color: #e8e8f0 !important;
+    border-color: rgba(245,158,11,0.4) !important;
+  }
+  .v3-key-status {
+    font-size: 12px !important;
+    color: #444460 !important;
+    margin-top: 10px !important;
+  }
+  .v3-key-status.ok { color: #22c55e !important; }
+
+  /* ===== DIVIDER ===== */
+  .v3-divider {
+    height: 1px !important;
+    background: linear-gradient(90deg, transparent, rgba(245,158,11,0.15), transparent) !important;
+    margin: 8px 0 28px !important;
+    border: none !important;
+  }
+
+  /* ===== UPLOADS ===== */
+  .v3-upload {
+    border: 2px dashed rgba(255,255,255,0.08) !important;
+    border-radius: 14px !important;
+    padding: 44px 20px !important;
+    text-align: center !important;
+    cursor: pointer !important;
+    color: #444460 !important;
+    font-size: 14px !important;
+    font-weight: 500 !important;
+    transition: all 0.25s !important;
+    display: block !important;
+    background: rgba(0,0,0,0.15) !important;
+  }
+  .v3-upload:hover {
+    border-color: rgba(245,158,11,0.4) !important;
+    background: rgba(245,158,11,0.04) !important;
+    color: #f59e0b !important;
+  }
+  .v3-upload input { display: none !important; }
+  .v3-upload-preview {
+    position: relative !important;
+    border-radius: 14px !important;
+    overflow: hidden !important;
+    border: 1px solid rgba(255,255,255,0.08) !important;
+  }
+  .v3-upload-preview img {
+    width: 100% !important; height: 180px !important;
+    object-fit: cover !important; display: block !important;
+  }
+  .v3-upload-clear {
+    position: absolute !important; top: 8px !important; right: 8px !important;
+    width: 28px !important; height: 28px !important;
+    border-radius: 50% !important; border: none !important;
+    background: rgba(0,0,0,0.7) !important; color: #fff !important;
+    cursor: pointer !important; font-size: 12px !important; font-weight: 700 !important;
+    display: flex !important; align-items: center !important; justify-content: center !important;
+    transition: background 0.2s !important; line-height: 1 !important;
+  }
+  .v3-upload-clear:hover { background: #ef4444 !important; }
+
+  /* ===== BUTTON ===== */
+  .v3-btn {
+    width: 100% !important;
+    padding: 20px !important;
+    background: linear-gradient(135deg, #f59e0b 0%, #f97316 60%, #ea580c 100%) !important;
+    color: #000 !important;
+    border: none !important;
+    border-radius: 14px !important;
+    font-size: 16px !important;
+    font-weight: 800 !important;
+    cursor: pointer !important;
+    transition: all 0.25s !important;
+    margin-top: 16px !important;
+    letter-spacing: 1px !important;
+    text-transform: uppercase !important;
+    box-shadow: 0 4px 20px rgba(245,158,11,0.2) !important;
+  }
+  .v3-btn:hover:not(:disabled) {
+    box-shadow: 0 8px 32px rgba(245,158,11,0.35) !important;
+    transform: translateY(-2px) !important;
+  }
+  .v3-btn:disabled { opacity: 0.4 !important; cursor: not-allowed !important; transform: none !important; }
+
+  /* ===== MESSAGES ===== */
+  .v3-error {
+    background: rgba(239,68,68,0.08) !important;
+    border: 1px solid rgba(239,68,68,0.2) !important;
+    border-radius: 12px !important;
+    padding: 14px 18px !important;
+    color: #f87171 !important;
+    font-size: 14px !important;
+    margin-bottom: 16px !important;
+    font-weight: 500 !important;
+  }
+  .v3-success {
+    background: rgba(34,197,94,0.08) !important;
+    border: 1px solid rgba(34,197,94,0.2) !important;
+    border-radius: 12px !important;
+    padding: 14px 18px !important;
+    color: #4ade80 !important;
+    font-size: 14px !important;
+    margin-bottom: 16px !important;
+    font-weight: 500 !important;
+  }
+
+  /* ===== STATUS BAR ===== */
+  .v3-status-bar {
+    display: flex !important; gap: 12px !important;
+    padding: 20px 32px !important;
+    background: #0a0a12 !important;
+    border-top: 1px solid rgba(255,255,255,0.06) !important;
+  }
+  .v3-stat {
+    flex: 1 !important; text-align: center !important;
+    padding: 16px !important;
+    background: rgba(0,0,0,0.3) !important;
+    border-radius: 12px !important;
+    border: 1px solid rgba(255,255,255,0.04) !important;
+  }
+  .v3-stat-num {
+    display: block !important; font-size: 28px !important;
+    font-weight: 800 !important; color: #f59e0b !important; line-height: 1.2 !important;
+  }
+  .v3-stat-label {
+    font-size: 10px !important; color: #444460 !important;
+    text-transform: uppercase !important; letter-spacing: 1.5px !important;
+    margin-top: 4px !important; display: block !important;
+  }
+
+  /* ===== HISTORY CARDS ===== */
+  .v3-card {
+    background: #0c0c14 !important;
+    border: 1px solid rgba(255,255,255,0.06) !important;
+    border-radius: 16px !important;
+    overflow: hidden !important;
+    margin-bottom: 16px !important;
+    transition: all 0.25s !important;
+  }
+  .v3-card:hover { border-color: rgba(245,158,11,0.3) !important; }
+  .v3-card-head {
+    display: flex !important; align-items: center !important; gap: 10px !important;
+    padding: 14px 18px !important;
+    border-bottom: 1px solid rgba(255,255,255,0.04) !important;
+    font-size: 13px !important;
+  }
+  .v3-dot { width: 10px !important; height: 10px !important; border-radius: 50% !important; flex-shrink: 0 !important; }
+  .v3-dot-green { background: #22c55e !important; box-shadow: 0 0 8px rgba(34,197,94,0.4) !important; }
+  .v3-dot-amber { background: #f59e0b !important; animation: v3pulse 2s infinite !important; box-shadow: 0 0 8px rgba(245,158,11,0.4) !important; }
+  .v3-dot-red { background: #ef4444 !important; box-shadow: 0 0 8px rgba(239,68,68,0.4) !important; }
+
+  @keyframes v3pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+  @keyframes v3spin { to { transform: rotate(360deg); } }
+
+  .v3-card-media {
+    width: 100% !important; display: block !important;
+    background: #000 !important; border-radius: 0 !important;
+    max-height: 500px !important;
+  }
+  .v3-card-processing {
+    height: 160px !important;
+    display: flex !important; flex-direction: column !important;
+    align-items: center !important; justify-content: center !important; gap: 12px !important;
+    color: #555570 !important; font-size: 13px !important;
+    background: rgba(0,0,0,0.2) !important;
+  }
+  .v3-spinner {
+    width: 32px !important; height: 32px !important;
+    border: 3px solid rgba(255,255,255,0.06) !important;
+    border-top-color: #f59e0b !important;
+    border-radius: 50% !important;
+    animation: v3spin 1s linear infinite !important;
+  }
+  .v3-card-body { padding: 16px 18px !important; }
+  .v3-card-prompt {
+    font-size: 14px !important; color: #c0c0d8 !important;
+    line-height: 1.6 !important; margin-bottom: 12px !important;
+  }
+  .v3-tags { display: flex !important; flex-wrap: wrap !important; gap: 6px !important; }
+  .v3-tag {
+    font-size: 11px !important; padding: 4px 10px !important;
+    border-radius: 6px !important;
+    background: rgba(255,255,255,0.04) !important;
+    color: #666680 !important; font-weight: 500 !important;
+    border: 1px solid rgba(255,255,255,0.04) !important;
+  }
+  .v3-tag-hl {
+    background: rgba(245,158,11,0.1) !important;
+    color: #f59e0b !important;
+    border-color: rgba(245,158,11,0.15) !important;
+  }
+  .v3-card-dl {
+    display: inline-block !important;
+    margin-top: 12px !important; padding: 8px 18px !important;
+    background: rgba(245,158,11,0.08) !important;
+    border: 1px solid rgba(245,158,11,0.2) !important;
+    border-radius: 8px !important;
+    color: #f59e0b !important; font-size: 12px !important;
+    text-decoration: none !important; font-weight: 600 !important;
+    transition: all 0.2s !important; margin-right: 8px !important;
+  }
+  .v3-card-dl:hover { background: rgba(245,158,11,0.15) !important; }
+
+  .v3-empty {
+    text-align: center !important; padding: 100px 20px !important;
+    color: #333350 !important; font-size: 16px !important; font-weight: 500 !important;
+  }
+
+  /* ===== RESPONSIVE ===== */
+  @media (max-width: 768px) {
+    .v3-row-3 { grid-template-columns: 1fr !important; }
+    .v3-row { grid-template-columns: 1fr !important; }
+    .v3-body { padding: 24px 20px !important; }
+    .v3-header { padding: 20px 24px !important; }
+    .v3-tabs { padding: 0 16px !important; }
+    .v3-status-bar { padding: 16px 20px !important; }
+    .v3-title { font-size: 20px !important; }
+    .v3-logo { width: 44px !important; height: 44px !important; font-size: 16px !important; }
+    .v3-credits-badge { padding: 8px 14px !important; }
+    .v3-credits-num { font-size: 18px !important; }
+  }
+</style>
+
+<script>
+(function() {
+  // ========== CHANGE THIS TO YOUR RENDER URL ==========
+  const API = "https://YOUR-APP-NAME.onrender.com/api";
+  // =====================================================
+
+  let S = {
+    tab: "text2vid",
+    apiKey: localStorage.getItem("veo3_api_key") || "",
+    showKey: false,
+    prompt: "",
+    aspect: "VIDEO_ASPECT_RATIO_LANDSCAPE",
+    numVids: "1",
+    // frames
+    startImg: null, startPrev: null,
+    endImg: null, endPrev: null,
+    // ingredients
+    refImgs: [], refPrevs: [],
+    // image gen
+    imgPrompt: "",
+    imgAspect: "IMAGE_ASPECT_RATIO_LANDSCAPE",
+    numImgs: "1",
+    imgRefs: [], imgRefPrevs: [],
+    // state
+    busy: false,
+    error: null,
+    success: null,
+    credits: null,
+    gens: JSON.parse(localStorage.getItem("veo3_gens") || "[]"),
+  };
+
+  function save() { localStorage.setItem("veo3_gens", JSON.stringify(S.gens)); }
+  function saveKey(v) { S.apiKey = v; localStorage.setItem("veo3_api_key", v); }
+  function esc(s) { return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+
+  // === API HELPERS ===
+  function headers() { return { "Authorization": "Bearer " + S.apiKey }; }
+
+  async function apiJson(method, path, body) {
+    const opts = { method, headers: { ...headers(), "Content-Type": "application/json" } };
+    if (body) opts.body = JSON.stringify(body);
+    const r = await fetch(API + path, opts);
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.message || data.error || `Error ${r.status}`);
+    return data;
+  }
+
+  async function apiForm(path, formData) {
+    const r = await fetch(API + path, { method: "POST", headers: headers(), body: formData });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.message || data.error || `Error ${r.status}`);
+    return data;
+  }
+
+  async function fetchCredits() {
+    if (!S.apiKey) return;
+    try {
+      const data = await apiJson("GET", "/v2/veo/credits");
+      if (Array.isArray(data)) {
+        const total = data.reduce((a, c) => a + (c.quota || 0), 0);
+        const used = data.reduce((a, c) => a + (c.used || 0), 0);
+        S.credits = { total, used, remaining: total - used };
+      }
+    } catch {}
+  }
+
+  // === GENERATION ===
+  async function generateTextToVideo() {
+    S.error = null; S.success = null; S.busy = true; render();
+    try {
+      if (!S.apiKey) throw new Error("Enter your API key first.");
+      if (!S.prompt.trim()) throw new Error("Enter a prompt.");
+      const data = await apiJson("POST", "/v2/veo/text-to-video", {
+        prompt: S.prompt.trim(),
+        aspect_ratio: S.aspect,
+        number_of_videos: parseInt(S.numVids),
+      });
+      addGens(data.histories, S.prompt.trim(), "text-to-video");
+      S.prompt = "";
+      S.success = `${data.histories.length} video(s) submitted!`;
+    } catch (e) { S.error = e.message; }
+    S.busy = false; render(); fetchCredits();
+  }
+
+  async function generateFramesToVideo() {
+    S.error = null; S.success = null; S.busy = true; render();
+    try {
+      if (!S.apiKey) throw new Error("Enter your API key first.");
+      if (!S.startImg) throw new Error("Upload a start image.");
+      if (!S.prompt.trim()) throw new Error("Enter a prompt.");
+      const fd = new FormData();
+      fd.append("start_image", S.startImg);
+      if (S.endImg) fd.append("end_image", S.endImg);
+      fd.append("prompt", S.prompt.trim());
+      fd.append("aspect_ratio", S.aspect);
+      fd.append("number_of_videos", S.numVids);
+      const data = await apiForm("/v2/veo/frames-to-video", fd);
+      addGens(data.histories, S.prompt.trim(), "frames-to-video");
+      S.prompt = ""; S.startImg = null; S.startPrev = null; S.endImg = null; S.endPrev = null;
+      S.success = `${data.histories.length} video(s) submitted!`;
+    } catch (e) { S.error = e.message; }
+    S.busy = false; render(); fetchCredits();
+  }
+
+  async function generateIngredients() {
+    S.error = null; S.success = null; S.busy = true; render();
+    try {
+      if (!S.apiKey) throw new Error("Enter your API key first.");
+      if (!S.refImgs.length) throw new Error("Upload at least 1 reference image.");
+      if (!S.prompt.trim()) throw new Error("Enter a prompt.");
+      const fd = new FormData();
+      S.refImgs.forEach(f => fd.append("reference_images", f));
+      fd.append("prompt", S.prompt.trim());
+      fd.append("number_of_videos", S.numVids);
+      const data = await apiForm("/v2/veo/ingredients-to-video", fd);
+      addGens(data.histories, S.prompt.trim(), "ingredients");
+      S.prompt = ""; S.refImgs = []; S.refPrevs = [];
+      S.success = `${data.histories.length} video(s) submitted!`;
+    } catch (e) { S.error = e.message; }
+    S.busy = false; render(); fetchCredits();
+  }
+
+  async function generateImage() {
+    S.error = null; S.success = null; S.busy = true; render();
+    try {
+      if (!S.apiKey) throw new Error("Enter your API key first.");
+      if (!S.imgPrompt.trim()) throw new Error("Enter a prompt.");
+      const fd = new FormData();
+      fd.append("prompt", S.imgPrompt.trim());
+      fd.append("aspect_ratio", S.imgAspect);
+      fd.append("number_of_images", S.numImgs);
+      S.imgRefs.forEach(f => fd.append("reference_images", f));
+      const data = await apiForm("/v2/veo/create-image", fd);
+      // create-image returns single object, not histories array
+      const hist = data.id ? [data] : (data.histories || [data]);
+      addGens(hist, S.imgPrompt.trim(), "image");
+      S.imgPrompt = ""; S.imgRefs = []; S.imgRefPrevs = [];
+      S.success = "Image generation submitted!";
+    } catch (e) { S.error = e.message; }
+    S.busy = false; render(); fetchCredits();
+  }
+
+  function addGens(histories, prompt, type) {
+    (histories || []).forEach(h => {
+      S.gens.unshift({
+        id: h.id,
+        prompt: prompt,
+        type: type,
+        status: h.status || "processing",
+        fileUrls: h.file_urls || (h.file_url ? [h.file_url] : []),
+        error: null,
+        createdAt: h.created_at || new Date().toISOString(),
+      });
+    });
+    save();
+    // Start polling for processing items
+    S.gens.filter(g => g.status === "processing").forEach(g => pollTask(g));
+  }
+
+  async function pollTask(gen) {
+    let attempts = 0;
+    while (attempts < 180) {
+      await new Promise(r => setTimeout(r, 8000));
+      attempts++;
+      try {
+        const data = await apiJson("GET", `/v2/veo/tasks/${gen.id}`);
+        if (data.status === "completed") {
+          gen.status = "completed";
+          gen.fileUrls = data.file_urls || [];
+          save(); render(); return;
+        } else if (data.status === "failed") {
+          gen.status = "failed";
+          gen.error = data.error || "Generation failed";
+          save(); render(); return;
+        }
+      } catch (err) {
+        if (err.message.includes("404") || err.message.includes("not found")) {
+          gen.status = "failed"; gen.error = "Task not found";
+          save(); render(); return;
+        }
+      }
+    }
+    gen.status = "failed"; gen.error = "Timed out";
+    save(); render();
+  }
+
+  function deleteGen(id) {
+    S.gens = S.gens.filter(g => g.id !== id);
+    save(); render();
+  }
+
+  // === RENDER ===
+  function render() {
+    const root = document.getElementById("veo3-app");
+    const proc = S.gens.filter(g => g.status === "processing").length;
+    const done = S.gens.filter(g => g.status === "completed").length;
+
+    root.innerHTML = `
+      <div class="v3-header">
+        <div class="v3-logo">V3</div>
+        <div class="v3-hdr-text">
+          <div class="v3-title">VEO 3</div>
+          <div class="v3-subtitle">Command Center</div>
+        </div>
+        ${S.credits ? `<div class="v3-credits-badge">
+          <span class="v3-credits-num">${S.credits.remaining}</span>
+          <span class="v3-credits-lbl">Credits Left</span>
+        </div>` : ''}
+      </div>
+      <div class="v3-tabs">
+        <button class="v3-tab ${S.tab==='text2vid'?'active':''}" data-tab="text2vid">Text to Video</button>
+        <button class="v3-tab ${S.tab==='frames'?'active':''}" data-tab="frames">Frames to Video</button>
+        <button class="v3-tab ${S.tab==='ingredients'?'active':''}" data-tab="ingredients">Reference Video</button>
+        <button class="v3-tab ${S.tab==='image'?'active':''}" data-tab="image">Create Image</button>
+        <button class="v3-tab ${S.tab==='history'?'active':''}" data-tab="history">History (${S.gens.length})</button>
+      </div>
+      <div class="v3-body">
+        ${S.tab === 'text2vid' ? tabText() : ''}
+        ${S.tab === 'frames' ? tabFrames() : ''}
+        ${S.tab === 'ingredients' ? tabIngredients() : ''}
+        ${S.tab === 'image' ? tabImage() : ''}
+        ${S.tab === 'history' ? tabHistory() : ''}
+      </div>
+      <div class="v3-status-bar">
+        <div class="v3-stat"><span class="v3-stat-num">${proc}</span><span class="v3-stat-label">Processing</span></div>
+        <div class="v3-stat"><span class="v3-stat-num">${done}</span><span class="v3-stat-label">Completed</span></div>
+        <div class="v3-stat"><span class="v3-stat-num">${S.gens.length}</span><span class="v3-stat-label">Total</span></div>
+      </div>`;
+    bindAll();
+  }
+
+  function keySection() {
+    return `<div class="v3-key-section">
+      <label class="v3-label">API Key</label>
+      <div class="v3-key-row">
+        <input class="v3-key-input" type="${S.showKey?'text':'password'}" id="v3k" value="${esc(S.apiKey)}" placeholder="Paste your GenAIPro API key...">
+        <button class="v3-key-toggle" id="v3kt">${S.showKey?'Hide':'Show'}</button>
+      </div>
+      <div class="v3-key-status ${S.apiKey?'ok':''}">${S.apiKey ? 'Key saved in browser' : 'Get key at genaipro.vn → Avatar → Manage Account → API Key'}</div>
+    </div><div class="v3-divider"></div>`;
+  }
+
+  function settingsRow(showAspect) {
+    return `<div class="v3-row${showAspect ? '-3' : '-3'}" style="grid-template-columns:${showAspect ? '1fr 1fr 1fr' : '1fr 1fr'} !important">
+      ${showAspect ? `<div class="v3-field"><label class="v3-label">Aspect Ratio</label>
+        <select class="v3-select" id="v3asp">
+          <option value="VIDEO_ASPECT_RATIO_LANDSCAPE" ${S.aspect==='VIDEO_ASPECT_RATIO_LANDSCAPE'?'selected':''}>Landscape (16:9)</option>
+          <option value="VIDEO_ASPECT_RATIO_PORTRAIT" ${S.aspect==='VIDEO_ASPECT_RATIO_PORTRAIT'?'selected':''}>Portrait (9:16)</option>
+        </select></div>` : ''}
+      <div class="v3-field"><label class="v3-label">Number of Videos</label>
+        <select class="v3-select" id="v3num">
+          <option value="1" ${S.numVids==='1'?'selected':''}>1 Video</option>
+          <option value="2" ${S.numVids==='2'?'selected':''}>2 Videos</option>
+          <option value="3" ${S.numVids==='3'?'selected':''}>3 Videos</option>
+          <option value="4" ${S.numVids==='4'?'selected':''}>4 Videos</option>
+        </select></div>
+    </div>`;
+  }
+
+  function msgs() {
+    return (S.error ? `<div class="v3-error">${esc(S.error)}</div>` : '') +
+           (S.success ? `<div class="v3-success">${esc(S.success)}</div>` : '');
+  }
+
+  // --- TEXT TO VIDEO ---
+  function tabText() {
+    return keySection() + `
+      <div class="v3-field"><label class="v3-label">Prompt</label>
+        <textarea class="v3-textarea" id="v3p" placeholder="Describe your video in detail... Veo 3 generates audio natively — include dialogue, music, ambience, and sound effects">${esc(S.prompt)}</textarea>
+      </div>
+      ${settingsRow(true)}
+      ${msgs()}
+      <button class="v3-btn" id="v3go-text" ${S.busy?'disabled':''}>${S.busy ? 'Submitting...' : 'Generate Video'}</button>`;
+  }
+
+  // --- FRAMES TO VIDEO ---
+  function tabFrames() {
+    return keySection() + `
+      <div class="v3-field"><label class="v3-label">Prompt</label>
+        <textarea class="v3-textarea" id="v3p" placeholder="Describe the motion and action for the video...">${esc(S.prompt)}</textarea>
+      </div>
+      <div class="v3-row">
+        <div class="v3-field"><label class="v3-label">Start Frame (required)</label>
+          ${S.startPrev
+            ? `<div class="v3-upload-preview"><img src="${S.startPrev}"><button class="v3-upload-clear" id="v3csi">X</button></div>`
+            : `<label class="v3-upload"><input type="file" accept="image/*" id="v3fsi">+ Upload start image</label>`}
+        </div>
+        <div class="v3-field"><label class="v3-label">End Frame (optional)</label>
+          ${S.endPrev
+            ? `<div class="v3-upload-preview"><img src="${S.endPrev}"><button class="v3-upload-clear" id="v3cei">X</button></div>`
+            : `<label class="v3-upload"><input type="file" accept="image/*" id="v3fei">+ Upload end image</label>`}
+        </div>
+      </div>
+      ${settingsRow(true)}
+      ${msgs()}
+      <button class="v3-btn" id="v3go-frames" ${S.busy?'disabled':''}>${S.busy ? 'Submitting...' : 'Generate from Frames'}</button>`;
+  }
+
+  // --- INGREDIENTS TO VIDEO ---
+  function tabIngredients() {
+    const refHtml = S.refPrevs.map((p, i) =>
+      `<div class="v3-upload-preview" style="display:inline-block !important;width:120px !important;margin-right:8px !important;vertical-align:top !important">
+        <img src="${p}" style="height:100px !important"><button class="v3-upload-clear" data-ref="${i}">X</button></div>`
+    ).join('');
+    return keySection() + `
+      <div class="v3-field"><label class="v3-label">Prompt</label>
+        <textarea class="v3-textarea" id="v3p" placeholder="Describe how the reference images should be used in the video...">${esc(S.prompt)}</textarea>
+      </div>
+      <div class="v3-field"><label class="v3-label">Reference Images (1-3)</label>
+        ${refHtml}
+        ${S.refImgs.length < 3 ? `<label class="v3-upload" style="display:inline-block !important;width:auto !important;padding:20px 32px !important;vertical-align:top !important"><input type="file" accept="image/*" id="v3fref">+ Add Reference</label>` : ''}
+      </div>
+      ${settingsRow(false)}
+      ${msgs()}
+      <button class="v3-btn" id="v3go-ingr" ${S.busy?'disabled':''}>${S.busy ? 'Submitting...' : 'Generate from References'}</button>`;
+  }
+
+  // --- CREATE IMAGE ---
+  function tabImage() {
+    const refHtml = S.imgRefPrevs.map((p, i) =>
+      `<div class="v3-upload-preview" style="display:inline-block !important;width:120px !important;margin-right:8px !important;vertical-align:top !important">
+        <img src="${p}" style="height:100px !important"><button class="v3-upload-clear" data-imgref="${i}">X</button></div>`
+    ).join('');
+    return keySection() + `
+      <div class="v3-field"><label class="v3-label">Prompt</label>
+        <textarea class="v3-textarea" id="v3ip" placeholder="Describe the image you want to generate...">${esc(S.imgPrompt)}</textarea>
+      </div>
+      <div class="v3-row-3" style="grid-template-columns:1fr 1fr !important">
+        <div class="v3-field"><label class="v3-label">Aspect Ratio</label>
+          <select class="v3-select" id="v3iasp">
+            <option value="IMAGE_ASPECT_RATIO_LANDSCAPE" ${S.imgAspect==='IMAGE_ASPECT_RATIO_LANDSCAPE'?'selected':''}>Landscape</option>
+            <option value="IMAGE_ASPECT_RATIO_PORTRAIT" ${S.imgAspect==='IMAGE_ASPECT_RATIO_PORTRAIT'?'selected':''}>Portrait</option>
+          </select></div>
+        <div class="v3-field"><label class="v3-label">Number of Images</label>
+          <select class="v3-select" id="v3inum">
+            <option value="1" ${S.numImgs==='1'?'selected':''}>1 Image</option>
+            <option value="2" ${S.numImgs==='2'?'selected':''}>2 Images</option>
+            <option value="3" ${S.numImgs==='3'?'selected':''}>3 Images</option>
+            <option value="4" ${S.numImgs==='4'?'selected':''}>4 Images</option>
+          </select></div>
+      </div>
+      <div class="v3-field"><label class="v3-label">Reference Images (optional, up to 5)</label>
+        ${refHtml}
+        ${S.imgRefs.length < 5 ? `<label class="v3-upload" style="display:inline-block !important;width:auto !important;padding:20px 32px !important;vertical-align:top !important"><input type="file" accept="image/*" id="v3firef">+ Add Reference</label>` : ''}
+      </div>
+      ${msgs()}
+      <button class="v3-btn" id="v3go-img" ${S.busy?'disabled':''}>${S.busy ? 'Submitting...' : 'Generate Image'}</button>`;
+  }
+
+  // --- HISTORY ---
+  function tabHistory() {
+    if (!S.gens.length) return `<div class="v3-empty">No generations yet. Create your first video or image!</div>`;
+    return S.gens.map(g => {
+      const dot = g.status==='completed' ? 'v3-dot-green' : g.status==='processing' ? 'v3-dot-amber' : 'v3-dot-red';
+      let media = '';
+      if (g.status === 'completed' && g.fileUrls?.length) {
+        media = g.fileUrls.map(u => {
+          if (u.match(/\.(mp4|webm|mov)/i)) {
+            return `<video class="v3-card-media" src="${esc(u)}" controls preload="metadata"></video>`;
+          } else {
+            return `<img class="v3-card-media" src="${esc(u)}" style="max-height:400px !important;object-fit:contain !important">`;
+          }
+        }).join('');
+      } else if (g.status === 'processing') {
+        media = `<div class="v3-card-processing"><div class="v3-spinner"></div><span>Generating... polling every 8s</span></div>`;
+      } else {
+        media = `<div class="v3-card-processing" style="color:#f87171 !important;height:80px !important">Failed${g.error ? ': '+esc(g.error) : ''}</div>`;
+      }
+      const downloads = (g.fileUrls || []).map((u, i) =>
+        `<a class="v3-card-dl" href="${esc(u)}" target="_blank" download>Download ${g.fileUrls.length > 1 ? '#'+(i+1) : ''}</a>`
+      ).join('');
+      return `<div class="v3-card">
+        <div class="v3-card-head">
+          <div class="v3-dot ${dot}"></div>
+          <span style="font-weight:700 !important;text-transform:capitalize !important;color:#c0c0d8 !important">${g.status}</span>
+          <span class="v3-tag" style="margin-left:4px !important">${g.type}</span>
+          <span style="margin-left:auto !important;color:#444460 !important;font-size:12px !important">${new Date(g.createdAt).toLocaleString()}</span>
+          <button class="v3-upload-clear" data-del="${g.id}" style="position:static !important;width:22px !important;height:22px !important;font-size:10px !important;margin-left:10px !important;flex-shrink:0 !important">X</button>
+        </div>
+        ${media}
+        <div class="v3-card-body">
+          <div class="v3-card-prompt">${esc(g.prompt)}</div>
+          ${downloads}
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  // === EVENTS ===
+  function bindAll() {
+    // tabs
+    document.querySelectorAll('.v3-tab').forEach(b => b.onclick = () => {
+      S.tab = b.dataset.tab; S.error = null; S.success = null; render();
+    });
+    // key
+    const k = document.getElementById('v3k');
+    if (k) k.oninput = e => { saveKey(e.target.value); fetchCredits(); };
+    const kt = document.getElementById('v3kt');
+    if (kt) kt.onclick = () => { S.showKey = !S.showKey; render(); };
+    // prompts
+    const p = document.getElementById('v3p');
+    if (p) p.oninput = e => { S.prompt = e.target.value; };
+    const ip = document.getElementById('v3ip');
+    if (ip) ip.oninput = e => { S.imgPrompt = e.target.value; };
+    // selects
+    const asp = document.getElementById('v3asp');
+    if (asp) asp.onchange = e => { S.aspect = e.target.value; };
+    const num = document.getElementById('v3num');
+    if (num) num.onchange = e => { S.numVids = e.target.value; };
+    const iasp = document.getElementById('v3iasp');
+    if (iasp) iasp.onchange = e => { S.imgAspect = e.target.value; };
+    const inum = document.getElementById('v3inum');
+    if (inum) inum.onchange = e => { S.numImgs = e.target.value; };
+    // frame uploads
+    const fsi = document.getElementById('v3fsi');
+    if (fsi) fsi.onchange = e => loadSingle(e, 'start');
+    const fei = document.getElementById('v3fei');
+    if (fei) fei.onchange = e => loadSingle(e, 'end');
+    const csi = document.getElementById('v3csi');
+    if (csi) csi.onclick = () => { S.startImg=null; S.startPrev=null; render(); };
+    const cei = document.getElementById('v3cei');
+    if (cei) cei.onclick = () => { S.endImg=null; S.endPrev=null; render(); };
+    // reference uploads
+    const fref = document.getElementById('v3fref');
+    if (fref) fref.onchange = e => loadMulti(e, 'ref');
+    const firef = document.getElementById('v3firef');
+    if (firef) firef.onchange = e => loadMulti(e, 'imgref');
+    // ref clear buttons
+    document.querySelectorAll('[data-ref]').forEach(b => {
+      b.onclick = () => { const i = parseInt(b.dataset.ref); S.refImgs.splice(i,1); S.refPrevs.splice(i,1); render(); };
+    });
+    document.querySelectorAll('[data-imgref]').forEach(b => {
+      b.onclick = () => { const i = parseInt(b.dataset.imgref); S.imgRefs.splice(i,1); S.imgRefPrevs.splice(i,1); render(); };
+    });
+    // gen buttons
+    const goText = document.getElementById('v3go-text');
+    if (goText) goText.onclick = generateTextToVideo;
+    const goFrames = document.getElementById('v3go-frames');
+    if (goFrames) goFrames.onclick = generateFramesToVideo;
+    const goIngr = document.getElementById('v3go-ingr');
+    if (goIngr) goIngr.onclick = generateIngredients;
+    const goImg = document.getElementById('v3go-img');
+    if (goImg) goImg.onclick = generateImage;
+    // delete
+    document.querySelectorAll('[data-del]').forEach(b => {
+      b.onclick = (e) => { e.stopPropagation(); deleteGen(b.dataset.del); };
+    });
+  }
+
+  function loadSingle(e, which) {
+    const f = e.target.files[0];
+    if (!f) return;
+    const r = new FileReader();
+    r.onload = ev => {
+      if (which === 'start') { S.startImg = f; S.startPrev = ev.target.result; }
+      else { S.endImg = f; S.endPrev = ev.target.result; }
+      render();
+    };
+    r.readAsDataURL(f);
+  }
+
+  function loadMulti(e, which) {
+    const f = e.target.files[0];
+    if (!f) return;
+    const r = new FileReader();
+    r.onload = ev => {
+      if (which === 'ref') { S.refImgs.push(f); S.refPrevs.push(ev.target.result); }
+      else { S.imgRefs.push(f); S.imgRefPrevs.push(ev.target.result); }
+      render();
+    };
+    r.readAsDataURL(f);
+  }
+
+  // === INIT ===
+  render();
+  fetchCredits();
+  // Resume polling for in-progress tasks
+  S.gens.filter(g => g.status === "processing").forEach(g => pollTask(g));
+})();
+</script>

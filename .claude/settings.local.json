@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:dev.to)",
+      "WebFetch(domain:ai.google.dev)",
+      "WebSearch",
+      "WebFetch(domain:veo3api.com)",
+      "WebFetch(domain:www.banana.dev)",
+      "Bash(npm install:*)",
+      "mcp__Claude_Preview__preview_start",
+      "WebFetch(domain:api-docs.genaipro.vn)",
+      "WebFetch(domain:api.genaipro.vn)",
+      "WebFetch(domain:genaipro.vn)",
+      "WebFetch(domain:web.archive.org)",
+      "WebFetch(domain:www.reddit.com)",
+      "WebFetch(domain:webcache.googleusercontent.com)",
+      "WebFetch(domain:www.veo3gen.app)",
+      "WebFetch(domain:www.facebook.com)",
+      "Bash(npm uninstall:*)"
+    ]
+  }
+}
