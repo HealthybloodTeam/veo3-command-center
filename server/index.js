@@ -17,17 +17,15 @@ const upload = multer({
 // Health check
 app.get("/", (req, res) => res.json({ status: "ok", service: "veo3-proxy" }));
 
-// === PROXY: JSON endpoints ===
+// === PROXY: GET endpoints ===
 
-// GET proxy (credits, histories, tasks, user info)
-app.get("/api/v2/*", async (req, res) => {
+async function proxyGet(req, res) {
   try {
     const token = req.headers.authorization;
     if (!token) return res.status(401).json({ error: "No Authorization header" });
 
     const path = req.path.replace("/api", "");
     const url = new URL(GENAIPRO + path);
-    // Forward query params
     Object.entries(req.query).forEach(([k, v]) => url.searchParams.set(k, v));
 
     const r = await fetch(url.toString(), {
@@ -38,7 +36,12 @@ app.get("/api/v2/*", async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
-});
+}
+
+app.get("/api/v2/me", proxyGet);
+app.get("/api/v2/veo/credits", proxyGet);
+app.get("/api/v2/veo/histories", proxyGet);
+app.get("/api/v2/veo/tasks/:id", proxyGet);
 
 // POST proxy: text-to-video (JSON body)
 app.post("/api/v2/veo/text-to-video", async (req, res) => {
