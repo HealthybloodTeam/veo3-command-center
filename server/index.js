@@ -1,13 +1,23 @@
 const express = require("express");
 const cors = require("cors");
 const multer = require("multer");
+const path = require("path");
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 const GENAIPRO = "https://genaipro.vn/api";
 
+// HealthyBlood app secrets (set in Render env vars)
+const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY || "";
+const SEAL_API_TOKEN = process.env.SEAL_API_TOKEN || "";
+const SEAL_API_SECRET = process.env.SEAL_API_SECRET || "";
+const SEAL_BASE = "https://app.sealsubscriptions.com/shopify/merchant/api";
+
 app.use(cors());
 app.use(express.json({ limit: "50mb" }));
+
+// Serve HealthyBlood PWA at /app
+app.use("/app", express.static(path.join(__dirname, "..", "healthyblood-app")));
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -153,6 +163,144 @@ app.post("/api/v2/veo/create-image", upload.array("reference_images", 5), async 
   }
 });
 
+// ============================================================
+// HEALTHYBLOOD APP ROUTES
+// ============================================================
+
+// HealthyBlood product knowledge — used as system prompt for AI assistant
+const HB_SYSTEM_PROMPT = `You are the HealthyBlood AI Assistant — a warm, knowledgeable wellness companion for customers using HealthyBlood™ Red Yeast Rice Cholesterol Cleanse liquid drops.
+
+PRODUCT YOU SUPPORT
+HealthyBlood™ is a liquid drop supplement designed to support healthy cholesterol levels naturally. Key ingredients:
+- Red Yeast Rice (naturally rich in monacolin K, supports healthy LDL levels)
+- Citrus Bergamot (flavonoid-rich, clinically linked to 15-25% lipid reduction)
+- Olive Leaf (oleuropein, antioxidant that supports flexible arteries)
+- Garlic (heart support)
+- Soursop (cardiovascular wellness)
+- Black Pepper Extract — 10mg (boosts absorption of other ingredients)
+
+POSITIONING
+HealthyBlood is positioned as a natural alternative for people who want to support cholesterol health WITHOUT the muscle pain, fatigue, or arterial irritation often associated with statin drugs. It works in harmony with the body to support steady energy and long-term cholesterol balance.
+
+HOW TO USE
+- Take 1 full dropper daily, ideally at the same time each day
+- Can be placed directly under the tongue or mixed into water/juice
+- Best taken with food
+- Consistency matters — most customers feel improvements after 4-8 weeks of daily use
+- Pairs best with: walking 20-30 min/day, hydration, whole-food diet
+
+YOUR ROLE
+- Help customers understand how to use HealthyBlood effectively
+- Answer ingredient and mechanism questions in plain, friendly language
+- Encourage healthy daily habits: walking, hydration, good sleep, whole foods
+- Celebrate consistency and streaks
+- Be warm, supportive, and conversational — like a wellness coach who genuinely cares
+- Use plain language. Most customers are 45-70 years old. Short sentences. Avoid jargon.
+
+CRITICAL SAFETY RULES — NEVER VIOLATE
+- You are NOT a doctor. NEVER diagnose conditions or prescribe treatments.
+- NEVER claim HealthyBlood treats, cures, or prevents disease.
+- For ANY medical questions (drug interactions, dosing concerns, side effects, lab results, symptoms), tell the customer to consult their physician.
+- If anyone mentions chest pain, severe symptoms, dizziness, or any emergency → tell them to call 911 or contact their doctor immediately.
+- NEVER recommend stopping prescription medications. If asked, say "That's a conversation to have with your doctor."
+- Avoid making specific medical claims about cholesterol numbers ("will lower LDL by X%"). Instead, talk about "supporting healthy levels" and "feeling steadier energy."
+
+TONE
+- Warm, encouraging, human
+- Plain language (5th grade reading level when possible)
+- Short sentences
+- Use the customer's name if you know it
+- Celebrate small wins`;
+
+// === DeepSeek AI chat proxy ===
+app.post("/api/hb/chat", async (req, res) => {
+  try {
+    if (!DEEPSEEK_API_KEY) return res.status(500).json({ error: "DEEPSEEK_API_KEY not configured" });
+    const { messages } = req.body;
+    if (!Array.isArray(messages)) return res.status(400).json({ error: "messages array required" });
+
+    // Always prepend the system prompt
+    const fullMessages = [
+      { role: "system", content: HB_SYSTEM_PROMPT },
+      ...messages.filter(m => m.role !== "system"),
+    ];
+
+    const r = await fetch("https://api.deepseek.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${DEEPSEEK_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "deepseek-chat",
+        messages: fullMessages,
+        temperature: 0.7,
+        max_tokens: 1000,
+      }),
+    });
+    const data = await r.json();
+    res.status(r.status).json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// === Seal Subscriptions proxy ===
+
+// List subscriptions for a customer email
+app.get("/api/hb/subscriptions", async (req, res) => {
+  try {
+    if (!SEAL_API_TOKEN) return res.status(500).json({ error: "SEAL_API_TOKEN not configured" });
+    const { email } = req.query;
+    if (!email) return res.status(400).json({ error: "email required" });
+
+    const r = await fetch(`${SEAL_BASE}/subscriptions?customer_email=${encodeURIComponent(email)}`, {
+      headers: { "X-Seal-Token": SEAL_API_TOKEN },
+    });
+    const data = await r.json();
+    res.status(r.status).json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get a single subscription by id
+app.get("/api/hb/subscription/:id", async (req, res) => {
+  try {
+    if (!SEAL_API_TOKEN) return res.status(500).json({ error: "SEAL_API_TOKEN not configured" });
+    const r = await fetch(`${SEAL_BASE}/subscription?id=${encodeURIComponent(req.params.id)}`, {
+      headers: { "X-Seal-Token": SEAL_API_TOKEN },
+    });
+    const data = await r.json();
+    res.status(r.status).json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Subscription action: pause / resume / cancel / skip / update
+app.post("/api/hb/subscription/:id/:action", async (req, res) => {
+  try {
+    if (!SEAL_API_TOKEN) return res.status(500).json({ error: "SEAL_API_TOKEN not configured" });
+    const { id, action } = req.params;
+    const validActions = ["pause", "resume", "cancel", "skip", "update"];
+    if (!validActions.includes(action)) return res.status(400).json({ error: "invalid action" });
+
+    const r = await fetch(`${SEAL_BASE}/subscription/${action}`, {
+      method: "POST",
+      headers: {
+        "X-Seal-Token": SEAL_API_TOKEN,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ id, ...req.body }),
+    });
+    const data = await r.json();
+    res.status(r.status).json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.listen(PORT, () => {
-  console.log(`Veo 3 Proxy running on port ${PORT}`);
+  console.log(`Veo 3 Proxy + HealthyBlood App running on port ${PORT}`);
 });
