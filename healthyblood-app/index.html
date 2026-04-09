@@ -261,49 +261,77 @@
   }
   .week-strip {
     display: flex;
-    gap: 6px;
+    gap: 8px;
     justify-content: space-between;
     padding-top: 18px;
+    margin-top: 4px;
     border-top: 1px solid var(--border-soft);
   }
   .week-day {
     flex: 1;
     text-align: center;
   }
-  .week-day .dot {
-    width: 32px;
-    height: 32px;
-    border-radius: 10px;
-    background: rgba(255,255,255,0.03);
-    border: 1.5px solid var(--border-soft);
-    margin: 0 auto 6px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 13px;
-    color: var(--text-muted);
-    font-weight: 700;
-    transition: all 0.2s;
-  }
-  .week-day .dot.partial {
-    background: rgba(74, 222, 128, 0.15);
-    border-color: rgba(74, 222, 128, 0.4);
-    color: var(--accent);
-  }
-  .week-day .dot.done {
-    background: linear-gradient(135deg, var(--accent), var(--accent-deep));
-    border-color: var(--accent);
-    color: var(--bg);
-    box-shadow: 0 4px 12px rgba(74, 222, 128, 0.25);
-  }
-  .week-day .dot.today {
-    box-shadow: 0 0 0 2px rgba(74, 222, 128, 0.4);
-  }
   .week-day .day-label {
     font-size: 10px;
     color: var(--text-muted);
-    font-weight: 600;
-    letter-spacing: 0.3px;
+    font-weight: 700;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .week-day .day-cell {
+    width: 100%;
+    aspect-ratio: 1;
+    max-width: 42px;
+    margin: 0 auto;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.025);
+    border: 1.5px solid var(--border-soft);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: "Fraunces", serif;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-soft);
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    position: relative;
+  }
+  .week-day .day-cell.partial {
+    background: rgba(74, 222, 128, 0.1);
+    border-color: rgba(74, 222, 128, 0.35);
+    color: var(--accent);
+  }
+  .week-day .day-cell.done {
+    background: linear-gradient(135deg, var(--accent), var(--accent-deep));
+    border-color: var(--accent);
+    color: var(--bg);
+    box-shadow: 0 4px 14px rgba(74, 222, 128, 0.25);
+  }
+  .week-day.today .day-label {
+    color: var(--accent);
+  }
+  .week-day .day-cell.today {
+    border-color: var(--accent);
+    border-width: 2px;
+    box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.15);
+  }
+  .week-day .day-cell .check-mark {
+    position: absolute;
+    bottom: -4px;
+    right: -4px;
+    width: 16px;
+    height: 16px;
+    background: var(--bg);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    color: var(--accent);
+  }
+  .week-day .day-cell.done .check-mark {
+    display: none;
   }
 
   /* === Habit Checklist === */
@@ -415,6 +443,601 @@
     box-shadow: 0 6px 20px rgba(239, 68, 68, 0.2);
   }
   .btn.small { padding: 11px 16px; font-size: 13px; border-radius: 11px; }
+
+  /* === Sub-tabs (for Health section) === */
+  .subtabs {
+    display: flex;
+    gap: 8px;
+    padding: 0 20px;
+    margin: -4px 0 18px;
+  }
+  .subtab {
+    flex: 1;
+    background: transparent;
+    border: 1.5px solid var(--border-soft);
+    color: var(--text-soft);
+    padding: 12px 14px;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+  .subtab.active {
+    background: linear-gradient(135deg, var(--accent), var(--accent-deep));
+    color: var(--bg);
+    border-color: var(--accent);
+    box-shadow: 0 4px 14px rgba(74, 222, 128, 0.2);
+  }
+  .subtab .emoji { font-size: 16px; }
+
+  /* === Lab Results === */
+  .lab-summary {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .lab-summary-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-soft);
+    border-radius: 16px;
+    padding: 16px;
+  }
+  .lab-summary-card .label {
+    font-size: 10px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+  .lab-summary-card .value {
+    font-family: "Fraunces", serif;
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1;
+  }
+  .lab-summary-card .unit {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-weight: 500;
+    margin-left: 4px;
+  }
+  .lab-summary-card .change {
+    font-size: 11px;
+    margin-top: 4px;
+    font-weight: 600;
+  }
+  .lab-summary-card .change.up { color: #f87171; }
+  .lab-summary-card .change.down { color: var(--accent); }
+  .lab-summary-card .change.flat { color: var(--text-muted); }
+  .lab-empty {
+    text-align: center;
+    padding: 40px 24px;
+    color: var(--text-soft);
+  }
+  .lab-chart-card { padding: 22px 18px 16px; }
+  .lab-chart-svg { width: 100%; height: 180px; display: block; }
+  .lab-chart-legend {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid var(--border-soft);
+    justify-content: center;
+  }
+  .lab-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--text-soft);
+    font-weight: 600;
+  }
+  .lab-legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+  }
+  .lab-history-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 16px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-soft);
+    border-radius: 12px;
+    margin-bottom: 8px;
+  }
+  .lab-history-date {
+    font-size: 13px;
+    color: var(--text);
+    font-weight: 600;
+  }
+  .lab-history-vals {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+  .lab-history-delete {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-size: 18px;
+    cursor: pointer;
+    padding: 4px 8px;
+  }
+  .lab-form {
+    background: var(--bg-card);
+    border: 1px solid var(--border-soft);
+    border-radius: 16px;
+    padding: 22px;
+    margin-bottom: 16px;
+  }
+  .lab-form label {
+    display: block;
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+  .lab-form input {
+    width: 100%;
+    background: var(--bg);
+    border: 1.5px solid var(--border-soft);
+    border-radius: 10px;
+    padding: 12px 14px;
+    color: var(--text);
+    font-size: 15px;
+    outline: none;
+    margin-bottom: 14px;
+    transition: border-color 0.2s;
+  }
+  .lab-form input:focus { border-color: var(--accent); }
+  .lab-form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .lab-form-grid .field { margin-bottom: 0; }
+  .lab-form-grid input { margin-bottom: 0; }
+  .lab-form .field { margin-bottom: 14px; }
+
+  /* === Recipes === */
+  .recipe-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-soft);
+    border-radius: 18px;
+    padding: 20px;
+    margin-bottom: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .recipe-card:active { transform: scale(0.99); background: var(--bg-card-hover); }
+  .recipe-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    margin-bottom: 12px;
+  }
+  .recipe-emoji {
+    font-size: 36px;
+    line-height: 1;
+    flex-shrink: 0;
+  }
+  .recipe-title {
+    font-family: "Fraunces", serif;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1.25;
+    margin-bottom: 4px;
+    letter-spacing: -0.3px;
+  }
+  .recipe-meta {
+    display: flex;
+    gap: 12px;
+    font-size: 11px;
+    color: var(--text-muted);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+  }
+  .recipe-meta span {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .recipe-summary {
+    font-size: 13px;
+    color: var(--text-soft);
+    line-height: 1.5;
+  }
+  .recipe-detail {
+    background: var(--bg-card);
+    border: 1px solid var(--border-soft);
+    border-radius: 18px;
+    padding: 24px;
+    margin-bottom: 16px;
+  }
+  .recipe-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--accent);
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 16px;
+    cursor: pointer;
+    background: transparent;
+    border: none;
+  }
+  .recipe-detail h3 {
+    font-family: "Fraunces", serif;
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 6px;
+    letter-spacing: -0.4px;
+  }
+  .recipe-detail .recipe-meta { margin-bottom: 16px; }
+  .recipe-section-title {
+    font-size: 11px;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 700;
+    margin: 18px 0 10px;
+  }
+  .recipe-detail ul, .recipe-detail ol {
+    padding-left: 20px;
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.7;
+  }
+  .recipe-detail li { margin-bottom: 6px; }
+  .recipe-benefit {
+    background: rgba(74, 222, 128, 0.06);
+    border: 1px solid rgba(74, 222, 128, 0.2);
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin-top: 16px;
+    font-size: 13px;
+    color: var(--text-soft);
+    line-height: 1.5;
+  }
+  .recipe-benefit strong { color: var(--accent); }
+
+  /* === Cora Suggests === */
+  .cora-suggests {
+    background:
+      radial-gradient(circle at top right, rgba(74, 222, 128, 0.12), transparent 60%),
+      var(--bg-card);
+    border: 1px solid rgba(74, 222, 128, 0.3);
+    border-radius: 20px;
+    padding: 22px;
+    margin-bottom: 16px;
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+  }
+  .cora-suggests-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 30% 30%, var(--accent-bright), var(--accent-deep));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: "Fraunces", serif;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--bg);
+    flex-shrink: 0;
+    box-shadow: 0 4px 14px rgba(74, 222, 128, 0.3);
+  }
+  .cora-suggests-content { flex: 1; min-width: 0; }
+  .cora-suggests-eyebrow {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    margin-bottom: 4px;
+  }
+  .cora-suggests-msg {
+    font-size: 14px;
+    color: var(--text);
+    line-height: 1.5;
+    margin-bottom: 12px;
+  }
+  .cora-suggests-cta {
+    background: linear-gradient(135deg, var(--accent), var(--accent-deep));
+    color: var(--bg);
+    border: none;
+    padding: 9px 16px;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  /* === Reminder settings === */
+  .reminder-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-soft);
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 14px;
+  }
+  .reminder-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .reminder-row:last-child { border-bottom: none; }
+  .reminder-row .info {
+    flex: 1;
+    margin-right: 14px;
+  }
+  .reminder-row .info .name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 2px;
+  }
+  .reminder-row .info .desc {
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+  .reminder-row input[type="time"] {
+    background: var(--bg);
+    border: 1.5px solid var(--border-soft);
+    border-radius: 10px;
+    padding: 8px 12px;
+    color: var(--text);
+    font-size: 14px;
+    font-family: inherit;
+    cursor: pointer;
+    color-scheme: dark;
+  }
+  /* Toggle switch */
+  .toggle {
+    position: relative;
+    width: 46px;
+    height: 26px;
+    background: var(--bg);
+    border: 1.5px solid var(--border-soft);
+    border-radius: 26px;
+    cursor: pointer;
+    transition: all 0.25s;
+    flex-shrink: 0;
+  }
+  .toggle::after {
+    content: "";
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 18px;
+    height: 18px;
+    background: var(--text-muted);
+    border-radius: 50%;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .toggle.on {
+    background: linear-gradient(135deg, var(--accent), var(--accent-deep));
+    border-color: var(--accent);
+  }
+  .toggle.on::after {
+    transform: translateX(20px);
+    background: var(--bg);
+  }
+
+  /* === Install banner === */
+  .install-banner {
+    background: linear-gradient(135deg, rgba(74, 222, 128, 0.12), rgba(74, 222, 128, 0.04));
+    border: 1px solid rgba(74, 222, 128, 0.3);
+    border-radius: 18px;
+    padding: 20px;
+    margin-bottom: 16px;
+    position: relative;
+    overflow: hidden;
+  }
+  .install-banner-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 10px;
+  }
+  .install-banner-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-deep));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    box-shadow: 0 4px 14px rgba(74, 222, 128, 0.25);
+  }
+  .install-banner-icon svg {
+    width: 22px;
+    height: 22px;
+    stroke: var(--bg);
+    fill: none;
+    stroke-width: 2.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .install-banner h3 {
+    font-family: "Fraunces", serif;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: -0.3px;
+    line-height: 1.2;
+  }
+  .install-banner-sub {
+    font-size: 12px;
+    color: var(--text-soft);
+    margin-top: 2px;
+  }
+  .install-steps {
+    margin: 14px 0 8px;
+    padding-left: 0;
+    list-style: none;
+    counter-reset: step;
+  }
+  .install-steps li {
+    counter-increment: step;
+    font-size: 14px;
+    color: var(--text);
+    line-height: 1.5;
+    padding: 8px 0 8px 36px;
+    position: relative;
+    border-bottom: 1px solid rgba(74, 222, 128, 0.1);
+  }
+  .install-steps li:last-child { border-bottom: none; }
+  .install-steps li::before {
+    content: counter(step);
+    position: absolute;
+    left: 0;
+    top: 8px;
+    width: 24px;
+    height: 24px;
+    background: rgba(74, 222, 128, 0.15);
+    color: var(--accent);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: "Fraunces", serif;
+    font-size: 13px;
+    font-weight: 700;
+  }
+  .install-steps .icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-soft);
+    border-radius: 6px;
+    margin: 0 4px;
+    vertical-align: middle;
+    font-size: 13px;
+  }
+  .install-banner-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 14px;
+  }
+  .install-banner-dismiss {
+    background: transparent;
+    border: 1px solid var(--border-soft);
+    color: var(--text-muted);
+    padding: 9px 16px;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .install-banner-cta {
+    background: linear-gradient(135deg, var(--accent), var(--accent-deep));
+    color: var(--bg);
+    padding: 9px 16px;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 700;
+    flex: 1;
+    cursor: pointer;
+  }
+
+  /* === Did You Know? card === */
+  .fact-card {
+    background: linear-gradient(135deg, rgba(74, 222, 128, 0.06), rgba(110, 231, 163, 0.02));
+    border: 1px solid var(--border-soft);
+    border-radius: 18px;
+    padding: 20px;
+    margin-bottom: 14px;
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+  }
+  .fact-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    background: rgba(74, 222, 128, 0.1);
+    border: 1px solid rgba(74, 222, 128, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    flex-shrink: 0;
+  }
+  .fact-content { flex: 1; min-width: 0; }
+  .fact-eyebrow {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    margin-bottom: 4px;
+  }
+  .fact-title {
+    font-family: "Fraunces", serif;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1.3;
+    margin-bottom: 4px;
+    letter-spacing: -0.2px;
+  }
+  .fact-text {
+    font-size: 13px;
+    color: var(--text-soft);
+    line-height: 1.5;
+  }
+
+  /* === Milestone toast === */
+  .milestone-toast {
+    position: fixed;
+    top: calc(20px + env(safe-area-inset-top));
+    left: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(135deg, var(--accent), var(--accent-deep));
+    color: var(--bg);
+    padding: 16px 24px;
+    border-radius: 16px;
+    font-weight: 700;
+    box-shadow: 0 10px 40px rgba(74, 222, 128, 0.4);
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    max-width: 90%;
+    animation: toastIn 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .milestone-toast .emoji { font-size: 24px; }
+  .milestone-toast .toast-text { font-size: 14px; }
+  .milestone-toast .toast-text strong { display: block; font-family: "Fraunces", serif; font-size: 16px; }
+  @keyframes toastIn {
+    from { opacity: 0; transform: translate(-50%, -20px); }
+    to { opacity: 1; transform: translate(-50%, 0); }
+  }
 
   /* === Tip card === */
   .tip-card {
@@ -992,12 +1615,21 @@ const state = {
   subsError: null,
   actionBusy: null,
   banner: null,
+  // Health: lab results [{date:"2026-04-09", ldl:120, hdl:55, total:200, trig:140}, ...]
+  labs: JSON.parse(localStorage.getItem("hb_labs") || "[]"),
+  healthSubtab: "labs", // "labs" | "recipes"
+  selectedRecipe: null, // recipe id when viewing detail
+  // Reminders: { drops:{enabled,time}, walk:{...}, water:{...}, sleep:{...} }
+  reminders: JSON.parse(localStorage.getItem("hb_reminders") || '{"drops":{"enabled":false,"time":"09:00"},"walk":{"enabled":false,"time":"17:00"},"water":{"enabled":false,"time":"12:00"},"sleep":{"enabled":false,"time":"22:00"}}'),
+  coraSuggestDismissed: localStorage.getItem("hb_cora_suggest_dismissed_" + new Date().toDateString()) === "true",
 };
 
 // === Storage helpers ===
 const saveHabits = () => localStorage.setItem("hb_habits_v2", JSON.stringify(state.habits));
 const saveChat = () => localStorage.setItem("hb_chat", JSON.stringify(state.chat));
 const saveEmail = (e) => { state.email = e; localStorage.setItem("hb_email", e); };
+const saveLabs = () => localStorage.setItem("hb_labs", JSON.stringify(state.labs));
+const saveReminders = () => localStorage.setItem("hb_reminders", JSON.stringify(state.reminders));
 
 // === Date helpers ===
 const todayKey = () => {
@@ -1033,7 +1665,7 @@ const calcStreak = () => {
 };
 const calcTotalDays = () => Object.keys(state.habits).filter(k => dayCompleted(k)).length;
 
-// === Daily tips ===
+// === Daily tips (rotates every day) ===
 const TIPS = [
   "Take HealthyBlood at the same time each day for the smoothest absorption.",
   "Pair your daily dropper with a glass of water and a 20-minute walk.",
@@ -1047,12 +1679,81 @@ const TIPS = [
   "Walking after meals can support healthy cholesterol levels.",
   "Take your dropper with food for the smoothest experience.",
   "Track how you FEEL, not just numbers. Energy and mood matter.",
+  "Add 10 deep breaths to your morning routine — your heart will thank you.",
+  "Eating slower helps digestion and gives your body time to absorb nutrients.",
+  "Magnesium-rich foods (spinach, almonds, avocado) support healthy blood pressure.",
+  "Strength training 2x per week supports cardiovascular health long-term.",
+  "Olive oil — a heart-healthy fat — pairs beautifully with the olive leaf in your drops.",
+  "A handful of berries a day delivers powerful antioxidants for your arteries.",
+  "Limit added sugar — it's one of the biggest hidden drivers of cholesterol issues.",
+  "Stand up and stretch every hour. Sitting too long affects circulation.",
 ];
-const dailyTip = () => {
-  const d = new Date();
-  const day = Math.floor(d.getTime() / 86400000);
-  return TIPS[day % TIPS.length];
-};
+const dayIndex = () => Math.floor(Date.now() / 86400000);
+const dailyTip = () => TIPS[dayIndex() % TIPS.length];
+
+// === Did You Know? educational facts (rotates every day) ===
+const FACTS = [
+  { title: "Red Yeast Rice & Heart Health", text: "Red yeast rice naturally contains monacolin K — a compound studied for its support of healthy cholesterol levels in the body." },
+  { title: "The Power of Bergamot", text: "Citrus bergamot is rich in unique flavonoids that researchers have linked to a 15-25% reduction in lipid levels within weeks." },
+  { title: "Olive Leaf's Secret", text: "Olive leaves contain oleuropein — a powerful antioxidant that helps your arteries stay flexible and resilient." },
+  { title: "Why Black Pepper?", text: "Black pepper extract (piperine) can boost the absorption of other nutrients by up to 2,000%. That's why it's in your formula." },
+  { title: "Garlic Through History", text: "Ancient Egyptians, Greeks, and Romans used garlic for heart health long before modern science confirmed its cardiovascular benefits." },
+  { title: "Soursop's Surprise", text: "Soursop is loaded with antioxidants and has been used in traditional wellness practices across the Caribbean for generations." },
+  { title: "Walking Is Medicine", text: "Just 30 minutes of walking 5 days a week can help support healthy blood pressure and cholesterol levels." },
+  { title: "The Mediterranean Way", text: "People who follow a Mediterranean diet — rich in olive oil, fish, and vegetables — have notably better heart health markers." },
+  { title: "Hydration Matters", text: "Even mild dehydration can thicken your blood, making it harder for your heart to circulate it efficiently." },
+  { title: "Sleep & Your Heart", text: "Adults who consistently get 7+ hours of sleep have measurably better cardiovascular health than those who don't." },
+  { title: "Stress & Cholesterol", text: "Chronic stress raises cortisol, which over time can negatively impact cholesterol levels. Daily breathing helps." },
+  { title: "Fiber Is Your Friend", text: "Soluble fiber (oats, beans, apples) actively binds to cholesterol in your gut and helps escort it out of the body." },
+  { title: "Liquid Drops Advantage", text: "HealthyBlood uses liquid drops for faster, more efficient absorption compared to traditional pills or capsules." },
+  { title: "Why Consistency Wins", text: "Cholesterol changes happen gradually. Most people see meaningful shifts after 8-12 weeks of consistent daily support." },
+];
+const dailyFact = () => FACTS[dayIndex() % FACTS.length];
+
+// === Milestones ===
+const MILESTONES = [
+  { days: 3,   emoji: "🌱", title: "3-day streak!", subtitle: "Habits are forming." },
+  { days: 7,   emoji: "🔥", title: "1 week strong!", subtitle: "You're building momentum." },
+  { days: 14,  emoji: "⭐", title: "2 weeks complete!", subtitle: "This is becoming who you are." },
+  { days: 30,  emoji: "🏆", title: "30 days!", subtitle: "A full month of dedication." },
+  { days: 60,  emoji: "💎", title: "60-day champion!", subtitle: "Real changes are happening." },
+  { days: 90,  emoji: "👑", title: "90 days!", subtitle: "You're unstoppable." },
+];
+function checkMilestone(prevStreak, newStreak) {
+  if (newStreak <= prevStreak) return null;
+  return MILESTONES.find(m => m.days === newStreak) || null;
+}
+function showMilestone(m) {
+  const toast = document.createElement("div");
+  toast.className = "milestone-toast";
+  toast.innerHTML = `<span class="emoji">${m.emoji}</span><div class="toast-text"><strong>${esc(m.title)}</strong>${esc(m.subtitle)}</div>`;
+  document.body.appendChild(toast);
+  setTimeout(() => { toast.style.opacity = "0"; toast.style.transform = "translate(-50%, -20px)"; toast.style.transition = "all 0.4s"; }, 4000);
+  setTimeout(() => toast.remove(), 4600);
+}
+
+// === Platform / install detection ===
+function detectPlatform() {
+  const ua = navigator.userAgent || "";
+  if (/iPhone|iPad|iPod/.test(ua) && !window.MSStream) return "ios";
+  if (/Android/.test(ua)) return "android";
+  return "desktop";
+}
+function isStandalone() {
+  return window.matchMedia("(display-mode: standalone)").matches
+    || window.navigator.standalone === true;
+}
+function shouldShowInstallBanner() {
+  if (isStandalone()) return false;
+  if (localStorage.getItem("hb_install_dismissed") === "true") return false;
+  const p = detectPlatform();
+  return p === "ios" || p === "android";
+}
+let deferredInstallPrompt = null;
+window.addEventListener("beforeinstallprompt", (e) => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+});
 
 // === API helpers ===
 async function apiPost(path, body) {
@@ -1070,6 +1771,550 @@ async function apiGet(path) {
   const data = await r.json();
   if (!r.ok) throw new Error(data.error || data.message || `Error ${r.status}`);
   return data;
+}
+
+// === Recipes data ===
+const RECIPES = [
+  {
+    id: "oats",
+    emoji: "🥣",
+    title: "Berry Almond Overnight Oats",
+    time: "5 min prep",
+    calories: "320 cal",
+    summary: "A creamy, fiber-rich breakfast that helps escort cholesterol out of your body.",
+    benefit: "Soluble fiber from oats binds to LDL cholesterol in your gut. Berries add antioxidants that protect your arteries.",
+    ingredients: [
+      "1/2 cup rolled oats",
+      "1/2 cup unsweetened almond milk",
+      "1 tbsp chia seeds",
+      "1/4 cup mixed berries",
+      "1 tbsp slivered almonds",
+      "1 tsp honey or maple syrup",
+      "Pinch of cinnamon",
+    ],
+    instructions: [
+      "Combine oats, almond milk, and chia seeds in a jar.",
+      "Stir well, then top with berries, almonds, sweetener, and cinnamon.",
+      "Cover and refrigerate overnight (or at least 4 hours).",
+      "Enjoy cold in the morning. Add a splash more milk if too thick.",
+    ],
+  },
+  {
+    id: "salmon",
+    emoji: "🐟",
+    title: "Lemon Garlic Salmon",
+    time: "20 min",
+    calories: "380 cal",
+    summary: "Omega-3 rich salmon paired with heart-healthy olive oil and garlic.",
+    benefit: "Salmon's omega-3 fatty acids support healthy triglycerides. Garlic adds cardiovascular benefits that pair beautifully with HealthyBlood.",
+    ingredients: [
+      "1 salmon fillet (5 oz)",
+      "2 tbsp olive oil",
+      "2 cloves garlic, minced",
+      "1 lemon (juice + zest)",
+      "1 tsp dried oregano",
+      "Salt and pepper to taste",
+      "Fresh parsley for garnish",
+    ],
+    instructions: [
+      "Preheat oven to 400°F (200°C).",
+      "Whisk olive oil, garlic, lemon juice, zest, and oregano.",
+      "Place salmon on parchment-lined baking sheet. Brush with mixture.",
+      "Season with salt and pepper. Bake 12-15 minutes until flaky.",
+      "Garnish with parsley and serve with steamed greens.",
+    ],
+  },
+  {
+    id: "buddha",
+    emoji: "🥗",
+    title: "Mediterranean Buddha Bowl",
+    time: "15 min",
+    calories: "420 cal",
+    summary: "A colorful bowl of leafy greens, chickpeas, and olive oil.",
+    benefit: "Loaded with fiber, plant protein, and monounsaturated fats — the foundation of the Mediterranean diet linked to better heart health.",
+    ingredients: [
+      "2 cups baby spinach",
+      "1/2 cup cooked quinoa",
+      "1/2 cup chickpeas, drained",
+      "1/4 cucumber, diced",
+      "1/4 cup cherry tomatoes",
+      "2 tbsp hummus",
+      "1 tbsp olive oil",
+      "Squeeze of lemon",
+    ],
+    instructions: [
+      "Layer spinach in a bowl as the base.",
+      "Top with quinoa, chickpeas, cucumber, and tomatoes.",
+      "Add a generous spoonful of hummus.",
+      "Drizzle with olive oil and lemon juice.",
+      "Toss gently and enjoy.",
+    ],
+  },
+  {
+    id: "smoothie",
+    emoji: "🫐",
+    title: "Heart-Boost Smoothie",
+    time: "5 min",
+    calories: "260 cal",
+    summary: "A vibrant blend of berries, banana, and flaxseed for sustained energy.",
+    benefit: "Berries are packed with anthocyanins that support arterial health. Flaxseed adds plant-based omega-3s.",
+    ingredients: [
+      "1 cup frozen mixed berries",
+      "1/2 banana",
+      "1 cup unsweetened almond milk",
+      "1 tbsp ground flaxseed",
+      "1 tbsp almond butter",
+      "1/2 tsp vanilla extract",
+    ],
+    instructions: [
+      "Add all ingredients to a blender.",
+      "Blend on high until completely smooth, about 60 seconds.",
+      "Pour into a tall glass and enjoy immediately.",
+    ],
+  },
+  {
+    id: "lentil",
+    emoji: "🍲",
+    title: "Cozy Lentil Stew",
+    time: "35 min",
+    calories: "350 cal",
+    summary: "A warming, fiber-loaded stew that's gentle on the gut and heart.",
+    benefit: "Lentils are rich in soluble fiber and plant protein — both linked to healthier cholesterol levels.",
+    ingredients: [
+      "1 cup brown or green lentils",
+      "1 onion, diced",
+      "2 carrots, chopped",
+      "2 celery stalks, chopped",
+      "3 cloves garlic, minced",
+      "4 cups vegetable broth",
+      "1 can diced tomatoes",
+      "1 tsp cumin",
+      "Salt, pepper, fresh herbs",
+    ],
+    instructions: [
+      "Heat olive oil in a pot. Sauté onion, carrot, celery 5 min.",
+      "Add garlic and cumin. Stir until fragrant.",
+      "Add lentils, broth, and tomatoes. Bring to a boil.",
+      "Reduce heat, cover, simmer 25-30 min until lentils are tender.",
+      "Season to taste and finish with fresh herbs.",
+    ],
+  },
+  {
+    id: "avotoast",
+    emoji: "🥑",
+    title: "Avocado Toast with Seeds",
+    time: "5 min",
+    calories: "290 cal",
+    summary: "Creamy avocado on whole-grain toast — quick, satisfying, heart-friendly.",
+    benefit: "Avocado's monounsaturated fats support healthy HDL levels. Whole grains add fiber and slow-release energy.",
+    ingredients: [
+      "1 slice whole-grain sourdough",
+      "1/2 ripe avocado",
+      "1 tsp pumpkin seeds",
+      "1 tsp hemp hearts",
+      "Squeeze of lemon",
+      "Pinch of red pepper flakes",
+      "Salt and pepper",
+    ],
+    instructions: [
+      "Toast the bread until golden.",
+      "Mash avocado with lemon, salt, and pepper.",
+      "Spread thickly on toast.",
+      "Top with seeds and red pepper flakes. Eat right away.",
+    ],
+  },
+];
+
+// === Cora Suggests logic ===
+// Analyzes the past 7 days of habits and picks the most-skipped one.
+// Returns { habit, message, count } or null if everything is on track.
+function getCoraSuggest() {
+  if (state.coraSuggestDismissed) return null;
+  const today = todayKey();
+  const todayHabits = habitsForDay(today);
+
+  // First: if user hasn't taken drops today, that's always priority #1
+  if (!todayHabits.drops) {
+    const h = new Date().getHours();
+    if (h >= 7) {
+      return {
+        habit: "drops",
+        message: h < 12
+          ? "Good morning! Don't forget your dropper today — pair it with breakfast for the smoothest absorption."
+          : h < 17
+            ? "Quick reminder: your daily dropper is still waiting for you. Take it with food."
+            : "Your daily dropper today? Even an evening dose with dinner counts toward your streak.",
+      };
+    }
+  }
+
+  // Otherwise: which habit has the user been missing most this week?
+  const missCounts = {};
+  HABITS.forEach(h => { missCounts[h.id] = 0; });
+  for (let i = 0; i < 7; i++) {
+    const k = dayKey(-i);
+    const dayH = habitsForDay(k);
+    HABITS.forEach(h => { if (!dayH[h.id]) missCounts[h.id]++; });
+  }
+
+  // Find the habit with the highest miss count (excluding drops, already covered)
+  let topHabit = null;
+  let topCount = 0;
+  HABITS.forEach(h => {
+    if (h.id === "drops") return;
+    if (missCounts[h.id] > topCount) {
+      topCount = missCounts[h.id];
+      topHabit = h;
+    }
+  });
+
+  if (!topHabit || topCount < 3) return null;
+
+  const messages = {
+    walk: "I noticed you've skipped your walk a few days this week. Even 10 minutes after a meal helps your heart and your mood.",
+    water: "Hydration has been a little behind this week. Try keeping a glass of water in your sightline today.",
+    veggies: "Greens have been missing from your week. One leafy salad or sautéed spinach side can change the whole day.",
+    sleep: "Your sleep streak could use some love. Try winding down 30 minutes earlier tonight — your heart recovers while you rest.",
+    noproc: "I noticed processed foods have crept in this week. One whole-food swap today is a quiet win.",
+  };
+
+  return {
+    habit: topHabit.id,
+    message: messages[topHabit.id] || `Let's get back on track with: ${topHabit.title.toLowerCase()}.`,
+  };
+}
+
+function dismissCoraSuggest() {
+  state.coraSuggestDismissed = true;
+  localStorage.setItem("hb_cora_suggest_dismissed_" + new Date().toDateString(), "true");
+  render();
+}
+function openCoraFromSuggest(habit) {
+  state.tab = "chat";
+  // Pre-fill a conversation starter
+  const starters = {
+    drops: "I want to remember to take my drops every day. Any tips?",
+    walk: "How can I build a daily walking habit?",
+    water: "I struggle to drink enough water. Help?",
+    veggies: "What are some easy ways to add more vegetables to my day?",
+    sleep: "I have trouble winding down at night. Tips?",
+    noproc: "How do I cut back on processed foods without feeling deprived?",
+  };
+  const q = starters[habit] || "Help me get back on track with my habits.";
+  render();
+  setTimeout(() => sendChat(q), 100);
+}
+window.dismissCoraSuggest = dismissCoraSuggest;
+window.openCoraFromSuggest = openCoraFromSuggest;
+
+function renderCoraSuggests() {
+  const s = getCoraSuggest();
+  if (!s) return "";
+  return `
+    <div class="cora-suggests">
+      <div class="cora-suggests-header">
+        <div class="cora-suggests-avatar">C</div>
+        <div class="cora-suggests-eyebrow">Cora suggests</div>
+      </div>
+      <div class="cora-suggests-message">${esc(s.message)}</div>
+      <div class="cora-suggests-actions">
+        <button class="cora-suggests-cta" onclick="openCoraFromSuggest('${s.habit}')">Talk to Cora</button>
+        <button class="cora-suggests-dismiss" onclick="dismissCoraSuggest()">Got it</button>
+      </div>
+    </div>
+  `;
+}
+
+// === Health view (combined Lab Results + Recipes) ===
+function viewHealth() {
+  return `
+    <div class="header">
+      <div class="wordmark"><span class="accent">Your</span> Health</div>
+      <div class="header-greeting">Track results, eat well</div>
+    </div>
+    <div class="section">
+      <div class="subtabs">
+        <button class="subtab ${state.healthSubtab === "labs" ? "active" : ""}" data-subtab="labs">Lab Results</button>
+        <button class="subtab ${state.healthSubtab === "recipes" ? "active" : ""}" data-subtab="recipes">Recipes</button>
+      </div>
+      ${state.healthSubtab === "labs" ? viewLabResults() : (state.selectedRecipe ? viewRecipeDetail() : viewRecipes())}
+    </div>
+  `;
+}
+
+function viewLabResults() {
+  const labs = [...state.labs].sort((a, b) => a.date.localeCompare(b.date));
+  const latest = labs[labs.length - 1];
+  const previous = labs[labs.length - 2];
+
+  const summaryCard = (label, key, unit, lowerBetter = true) => {
+    const cur = latest ? latest[key] : null;
+    const prev = previous ? previous[key] : null;
+    const change = cur != null && prev != null ? cur - prev : null;
+    const dir = change == null ? "" : change === 0 ? "same" : (change < 0) === lowerBetter ? "good" : "bad";
+    const arrow = change == null ? "—" : change > 0 ? "↑" : change < 0 ? "↓" : "•";
+    return `
+      <div class="lab-summary-card">
+        <div class="lab-summary-label">${label}</div>
+        <div class="lab-summary-value">${cur != null ? cur : "—"}<small>${unit}</small></div>
+        <div class="lab-summary-change ${dir}">
+          ${change != null ? `${arrow} ${Math.abs(change)} from last` : "No previous reading"}
+        </div>
+      </div>
+    `;
+  };
+
+  const chartHtml = labs.length >= 2 ? renderLabChart(labs) : "";
+
+  const historyHtml = labs.length === 0
+    ? `<div class="lab-empty">
+         <div class="lab-empty-icon">🩺</div>
+         <div class="lab-empty-title">No lab results yet</div>
+         <div class="lab-empty-text">Add your first lipid panel to start tracking your progress over time. We'll never share this data.</div>
+       </div>`
+    : `<div class="card">
+         <div class="card-eyebrow">History</div>
+         <div class="card-title">All readings</div>
+         <div style="margin-top:14px">
+           ${[...labs].reverse().map(l => `
+             <div class="lab-history-row">
+               <div class="lab-history-date">${formatDate(l.date)}</div>
+               <div class="lab-history-vals">
+                 <span><strong>LDL</strong> ${l.ldl}</span>
+                 <span><strong>HDL</strong> ${l.hdl}</span>
+                 <span><strong>Total</strong> ${l.total}</span>
+                 <span><strong>Trig</strong> ${l.trig}</span>
+               </div>
+               <button class="lab-history-delete" onclick="deleteLabEntry('${l.date}')">×</button>
+             </div>
+           `).join("")}
+         </div>
+       </div>`;
+
+  return `
+    ${labs.length > 0 ? `
+      <div class="lab-summary">
+        ${summaryCard("LDL", "ldl", "mg/dL", true)}
+        ${summaryCard("HDL", "hdl", "mg/dL", false)}
+        ${summaryCard("Total", "total", "mg/dL", true)}
+        ${summaryCard("Triglycerides", "trig", "mg/dL", true)}
+      </div>
+    ` : ""}
+
+    ${chartHtml}
+
+    <div class="card">
+      <div class="card-eyebrow">Add New Reading</div>
+      <div class="card-title">Log a lipid panel</div>
+      <div class="card-sub" style="margin-bottom:14px">Enter the values from your most recent blood work. All optional except date.</div>
+      <form class="lab-form" id="labForm">
+        <div class="lab-form-grid">
+          <label>Date<input type="date" id="lab-date" value="${todayKey()}" required></label>
+          <label>LDL (mg/dL)<input type="number" id="lab-ldl" placeholder="e.g. 120" min="0" max="500"></label>
+          <label>HDL (mg/dL)<input type="number" id="lab-hdl" placeholder="e.g. 55" min="0" max="200"></label>
+          <label>Total (mg/dL)<input type="number" id="lab-total" placeholder="e.g. 200" min="0" max="500"></label>
+          <label>Triglycerides<input type="number" id="lab-trig" placeholder="e.g. 140" min="0" max="1000"></label>
+        </div>
+        <button type="submit" class="btn full" style="margin-top:14px">Save Reading</button>
+      </form>
+    </div>
+
+    ${historyHtml}
+
+    <p style="text-align:center;color:var(--text-muted);font-size:11px;margin-top:20px;line-height:1.6;padding:0 20px">
+      Always discuss your lab results with your physician. HealthyBlood is not a diagnostic tool.
+    </p>
+  `;
+}
+
+// SVG line chart for LDL & HDL over time
+function renderLabChart(labs) {
+  const W = 320, H = 180, P = 30;
+  const ldls = labs.map(l => l.ldl).filter(v => v != null);
+  const hdls = labs.map(l => l.hdl).filter(v => v != null);
+  const allVals = [...ldls, ...hdls];
+  if (allVals.length === 0) return "";
+  const min = Math.max(0, Math.min(...allVals) - 20);
+  const max = Math.max(...allVals) + 20;
+  const xStep = labs.length > 1 ? (W - 2 * P) / (labs.length - 1) : 0;
+  const yPos = v => H - P - ((v - min) / (max - min)) * (H - 2 * P);
+
+  const linePath = (key) => labs.map((l, i) => {
+    if (l[key] == null) return null;
+    return `${i === 0 ? "M" : "L"} ${P + i * xStep} ${yPos(l[key])}`;
+  }).filter(Boolean).join(" ");
+
+  const dots = (key, color) => labs.map((l, i) => {
+    if (l[key] == null) return "";
+    return `<circle cx="${P + i * xStep}" cy="${yPos(l[key])}" r="3.5" fill="${color}"/>`;
+  }).join("");
+
+  return `
+    <div class="lab-chart-card">
+      <div class="card-eyebrow">Trend</div>
+      <div class="card-title">Your progress</div>
+      <svg class="lab-chart-svg" viewBox="0 0 ${W} ${H}">
+        <line x1="${P}" y1="${H - P}" x2="${W - P}" y2="${H - P}" stroke="rgba(255,255,255,0.1)"/>
+        <line x1="${P}" y1="${P}" x2="${P}" y2="${H - P}" stroke="rgba(255,255,255,0.1)"/>
+        <path d="${linePath("ldl")}" fill="none" stroke="#ef4444" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="${linePath("hdl")}" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        ${dots("ldl", "#ef4444")}
+        ${dots("hdl", "#10b981")}
+      </svg>
+      <div class="lab-chart-legend">
+        <div class="lab-legend-item"><span class="lab-legend-dot" style="background:#ef4444"></span>LDL</div>
+        <div class="lab-legend-item"><span class="lab-legend-dot" style="background:#10b981"></span>HDL</div>
+      </div>
+    </div>
+  `;
+}
+
+function addLabEntry(e) {
+  e.preventDefault();
+  const date = document.getElementById("lab-date").value;
+  const ldl = document.getElementById("lab-ldl").value;
+  const hdl = document.getElementById("lab-hdl").value;
+  const total = document.getElementById("lab-total").value;
+  const trig = document.getElementById("lab-trig").value;
+  if (!date) return;
+  // Replace any existing entry on the same date
+  state.labs = state.labs.filter(l => l.date !== date);
+  state.labs.push({
+    date,
+    ldl: ldl ? Number(ldl) : null,
+    hdl: hdl ? Number(hdl) : null,
+    total: total ? Number(total) : null,
+    trig: trig ? Number(trig) : null,
+  });
+  saveLabs();
+  render();
+}
+function deleteLabEntry(date) {
+  if (!confirm("Delete this lab reading?")) return;
+  state.labs = state.labs.filter(l => l.date !== date);
+  saveLabs();
+  render();
+}
+window.deleteLabEntry = deleteLabEntry;
+
+function viewRecipes() {
+  return `
+    ${RECIPES.map(r => `
+      <div class="recipe-card" onclick="openRecipe('${r.id}')">
+        <div class="recipe-header">
+          <div class="recipe-emoji">${r.emoji}</div>
+          <div style="flex:1;min-width:0">
+            <div class="recipe-title">${esc(r.title)}</div>
+            <div class="recipe-meta">${esc(r.time)} · ${esc(r.calories)}</div>
+          </div>
+        </div>
+        <div class="recipe-summary">${esc(r.summary)}</div>
+      </div>
+    `).join("")}
+  `;
+}
+
+function viewRecipeDetail() {
+  const r = RECIPES.find(x => x.id === state.selectedRecipe);
+  if (!r) return viewRecipes();
+  return `
+    <div class="recipe-detail">
+      <button class="recipe-back" onclick="closeRecipe()">‹ Back to recipes</button>
+      <div class="recipe-emoji" style="font-size:64px;text-align:center;margin:8px 0 4px">${r.emoji}</div>
+      <div class="recipe-title" style="font-size:24px;text-align:center;font-family:'Fraunces',serif">${esc(r.title)}</div>
+      <div class="recipe-meta" style="text-align:center;margin-bottom:18px">${esc(r.time)} · ${esc(r.calories)}</div>
+
+      <div class="recipe-benefit">
+        <strong>Why it's good for your heart:</strong> ${esc(r.benefit)}
+      </div>
+
+      <div class="recipe-section-title">Ingredients</div>
+      <ul style="padding-left:20px;line-height:1.9;color:var(--text)">
+        ${r.ingredients.map(i => `<li>${esc(i)}</li>`).join("")}
+      </ul>
+
+      <div class="recipe-section-title">Instructions</div>
+      <ol style="padding-left:20px;line-height:1.8;color:var(--text)">
+        ${r.instructions.map(i => `<li style="margin-bottom:8px">${esc(i)}</li>`).join("")}
+      </ol>
+    </div>
+  `;
+}
+function openRecipe(id) {
+  state.selectedRecipe = id;
+  render();
+  window.scrollTo(0, 0);
+}
+function closeRecipe() {
+  state.selectedRecipe = null;
+  render();
+}
+window.openRecipe = openRecipe;
+window.closeRecipe = closeRecipe;
+
+// === Reminder notifications ===
+async function requestNotificationPermission() {
+  if (!("Notification" in window)) {
+    alert("This device doesn't support notifications.");
+    return false;
+  }
+  if (Notification.permission === "granted") return true;
+  if (Notification.permission === "denied") {
+    alert("Notifications are blocked. Please enable them in your browser settings.");
+    return false;
+  }
+  const result = await Notification.requestPermission();
+  return result === "granted";
+}
+
+async function toggleReminder(habitId) {
+  const r = state.reminders[habitId];
+  if (!r.enabled) {
+    const ok = await requestNotificationPermission();
+    if (!ok) return;
+  }
+  r.enabled = !r.enabled;
+  saveReminders();
+  scheduleReminders();
+  render();
+}
+function updateReminderTime(habitId, time) {
+  state.reminders[habitId].time = time;
+  saveReminders();
+  scheduleReminders();
+}
+window.toggleReminder = toggleReminder;
+window.updateReminderTime = updateReminderTime;
+
+// Simple in-page reminder scheduler — checks every minute
+let reminderInterval = null;
+function scheduleReminders() {
+  if (reminderInterval) clearInterval(reminderInterval);
+  reminderInterval = setInterval(() => {
+    if (Notification.permission !== "granted") return;
+    const now = new Date();
+    const hhmm = `${String(now.getHours()).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}`;
+    const lastFiredKey = "hb_last_fired_" + todayKey();
+    const lastFired = JSON.parse(localStorage.getItem(lastFiredKey) || "{}");
+    Object.entries(state.reminders).forEach(([habitId, r]) => {
+      if (!r.enabled) return;
+      if (r.time !== hhmm) return;
+      if (lastFired[habitId]) return;
+      const habit = HABITS.find(h => h.id === habitId);
+      if (!habit) return;
+      // Skip if already done today
+      if (habitsForDay(todayKey())[habitId]) return;
+      try {
+        new Notification("HealthyBlood", {
+          body: habit.title,
+          icon: "/app/icon-192.png",
+          tag: "hb-" + habitId,
+        });
+      } catch (e) { /* ignore */ }
+      lastFired[habitId] = true;
+      localStorage.setItem(lastFiredKey, JSON.stringify(lastFired));
+    });
+  }, 60000);
 }
 
 // === Welcome ===
@@ -1100,7 +2345,7 @@ function viewHome() {
   const firstName = state.email ? state.email.split("@")[0].split(/[._]/)[0] : "friend";
   const greeting = getGreeting();
 
-  // 7-day strip
+  // 7-day strip with day-of-month numbers + 3-letter day labels
   const days = [];
   for (let i = 6; i >= 0; i--) {
     const k = dayKey(-i);
@@ -1108,7 +2353,8 @@ function viewHome() {
     d.setDate(d.getDate() - i);
     days.push({
       key: k,
-      label: d.toLocaleDateString("en-US", { weekday: "short" }).slice(0, 1),
+      label: d.toLocaleDateString("en-US", { weekday: "short" }).toUpperCase(),
+      dayNum: d.getDate(),
       done: dayCompleted(k),
       partial: !dayCompleted(k) && dayHasAny(k),
       today: i === 0,
@@ -1128,6 +2374,8 @@ function viewHome() {
         ? "Great start. Keep going."
         : "Let's start your day strong.";
 
+  const fact = dailyFact();
+
   return `
     <div class="header">
       <div class="wordmark">Healthy<span class="accent">Blood</span></div>
@@ -1136,6 +2384,9 @@ function viewHome() {
     </div>
 
     <div class="section">
+      ${shouldShowInstallBanner() ? renderInstallBanner() : ""}
+      ${renderCoraSuggests()}
+
       <div class="hero-card">
         <div class="hero-progress-row">
           <div class="progress-ring">
@@ -1158,12 +2409,19 @@ function viewHome() {
 
         <div class="week-strip">
           ${days.map(d => `
-            <div class="week-day">
-              <div class="dot ${d.done ? "done" : ""} ${d.partial ? "partial" : ""} ${d.today ? "today" : ""}">${d.done ? "✓" : d.partial ? "·" : ""}</div>
+            <div class="week-day ${d.today ? "today" : ""}">
               <div class="day-label">${d.label}</div>
+              <div class="day-cell ${d.done ? "done" : ""} ${d.partial ? "partial" : ""} ${d.today ? "today" : ""}">
+                ${d.dayNum}
+              </div>
             </div>
           `).join("")}
         </div>
+      </div>
+
+      <div class="tip-card">
+        <div class="tip-eyebrow">💡 Tip of the day</div>
+        <div class="tip-text">${esc(dailyTip())}</div>
       </div>
 
       <div class="card">
@@ -1190,13 +2448,86 @@ function viewHome() {
         </div>
       </div>
 
-      <div class="tip-card">
-        <div class="tip-eyebrow">💡 Tip of the day</div>
-        <div class="tip-text">${esc(dailyTip())}</div>
+      <div class="fact-card">
+        <div class="fact-icon">🧠</div>
+        <div class="fact-content">
+          <div class="fact-eyebrow">Did you know?</div>
+          <div class="fact-title">${esc(fact.title)}</div>
+          <div class="fact-text">${esc(fact.text)}</div>
+        </div>
       </div>
     </div>
   `;
 }
+
+function renderInstallBanner() {
+  const platform = detectPlatform();
+  if (platform === "ios") {
+    return `
+      <div class="install-banner" id="installBanner">
+        <div class="install-banner-header">
+          <div class="install-banner-icon">
+            <svg viewBox="0 0 24 24"><path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14"/></svg>
+          </div>
+          <div>
+            <h3>Add to your Home Screen</h3>
+            <div class="install-banner-sub">Quick access, just like a real app</div>
+          </div>
+        </div>
+        <ol class="install-steps">
+          <li>Tap the <span class="icon">⬆</span> <strong>Share</strong> button at the bottom of Safari</li>
+          <li>Scroll down and tap <strong>"Add to Home Screen"</strong></li>
+          <li>Tap <strong>"Add"</strong> in the top-right corner</li>
+        </ol>
+        <div class="install-banner-actions">
+          <button class="install-banner-dismiss" onclick="dismissInstall()">Maybe later</button>
+        </div>
+      </div>
+    `;
+  }
+  if (platform === "android") {
+    return `
+      <div class="install-banner" id="installBanner">
+        <div class="install-banner-header">
+          <div class="install-banner-icon">
+            <svg viewBox="0 0 24 24"><path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14"/></svg>
+          </div>
+          <div>
+            <h3>Install HealthyBlood</h3>
+            <div class="install-banner-sub">Quick access, just like a real app</div>
+          </div>
+        </div>
+        <ol class="install-steps">
+          <li>Tap the <strong>menu</strong> (⋮) in the top-right of your browser</li>
+          <li>Tap <strong>"Install app"</strong> or <strong>"Add to Home screen"</strong></li>
+          <li>Tap <strong>"Install"</strong> to confirm</li>
+        </ol>
+        <div class="install-banner-actions">
+          ${deferredInstallPrompt ? `<button class="install-banner-cta" onclick="triggerInstall()">Install now</button>` : ""}
+          <button class="install-banner-dismiss" onclick="dismissInstall()">Maybe later</button>
+        </div>
+      </div>
+    `;
+  }
+  return "";
+}
+
+function dismissInstall() {
+  localStorage.setItem("hb_install_dismissed", "true");
+  render();
+}
+async function triggerInstall() {
+  if (!deferredInstallPrompt) return;
+  deferredInstallPrompt.prompt();
+  const { outcome } = await deferredInstallPrompt.userChoice;
+  if (outcome === "accepted") {
+    deferredInstallPrompt = null;
+    localStorage.setItem("hb_install_dismissed", "true");
+  }
+  render();
+}
+window.dismissInstall = dismissInstall;
+window.triggerInstall = triggerInstall;
 function getGreeting() {
   const h = new Date().getHours();
   if (h < 12) return "Good morning";
@@ -1403,6 +2734,26 @@ function viewProfile() {
         </div>
       </div>
 
+      <div class="card">
+        <div class="card-eyebrow">Daily Reminders</div>
+        <div class="card-title">Never miss a habit</div>
+        <div class="card-sub" style="margin-bottom:14px">Get a gentle nudge from HealthyBlood at the time you choose. Notifications only fire if the habit isn't already done.</div>
+        ${["drops","walk","water","sleep"].map(id => {
+          const habit = HABITS.find(h => h.id === id);
+          const r = state.reminders[id] || { enabled: false, time: "09:00" };
+          return `
+            <div class="reminder-row">
+              <div class="reminder-icon">${habit.icon}</div>
+              <div class="reminder-info">
+                <div class="reminder-title">${esc(habit.title)}</div>
+                <input type="time" class="reminder-time" value="${r.time}" data-reminder="${id}" ${r.enabled ? "" : "disabled"}>
+              </div>
+              <div class="toggle ${r.enabled ? "on" : ""}" data-toggle="${id}"></div>
+            </div>
+          `;
+        }).join("")}
+      </div>
+
       <div class="profile-row" onclick="window.open('https://www.tryhealthyblood.com','_blank')">
         <div class="label"><span class="label-icon">🛒</span>Shop HealthyBlood</div>
         <div class="arrow">›</div>
@@ -1455,6 +2806,7 @@ function viewNav() {
   const tabs = [
     { id: "home",    label: "Today",   icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 12L12 3l9 9M5 10v10h14V10" stroke-linecap="round" stroke-linejoin="round"/></svg>` },
     { id: "chat",    label: "Cora",    icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 21l1.9-5.4A8 8 0 1 1 21 12Z" stroke-linecap="round" stroke-linejoin="round"/></svg>` },
+    { id: "health",  label: "Health",  icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.8 1-1a5.5 5.5 0 0 0 0-7.6Z" stroke-linecap="round" stroke-linejoin="round"/></svg>` },
     { id: "subs",    label: "Plan",    icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 8V21H3V8M1 3h22v5H1zM10 12h4" stroke-linecap="round" stroke-linejoin="round"/></svg>` },
     { id: "profile", label: "You",     icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0" stroke-linecap="round"/></svg>` },
   ];
@@ -1483,6 +2835,7 @@ function render() {
   let mainContent = "";
   if (state.tab === "home") mainContent = viewHome();
   else if (state.tab === "chat") mainContent = viewChat();
+  else if (state.tab === "health") mainContent = viewHealth();
   else if (state.tab === "subs") mainContent = viewSubs();
   else if (state.tab === "profile") mainContent = viewProfile();
 
@@ -1525,10 +2878,14 @@ function bindEvents() {
     row.addEventListener("click", () => {
       const id = row.getAttribute("data-habit");
       const today = todayKey();
+      const prevStreak = calcStreak();
       if (!state.habits[today]) state.habits[today] = {};
       state.habits[today][id] = !state.habits[today][id];
       saveHabits();
+      const newStreak = calcStreak();
+      const milestone = checkMilestone(prevStreak, newStreak);
       render();
+      if (milestone) showMilestone(milestone);
     });
   });
 
@@ -1557,6 +2914,28 @@ function bindEvents() {
   if (state.tab === "subs" && !state.subs && !state.subsLoading && !state.subsError) {
     loadSubs();
   }
+
+  // Health sub-tabs
+  document.querySelectorAll(".subtab").forEach(b => {
+    b.addEventListener("click", () => {
+      state.healthSubtab = b.getAttribute("data-subtab");
+      state.selectedRecipe = null;
+      render();
+    });
+  });
+
+  // Lab form submit
+  const labForm = document.getElementById("labForm");
+  if (labForm) labForm.addEventListener("submit", addLabEntry);
+
+  // Reminder toggles
+  document.querySelectorAll(".toggle[data-toggle]").forEach(el => {
+    el.addEventListener("click", () => toggleReminder(el.getAttribute("data-toggle")));
+  });
+  // Reminder time inputs
+  document.querySelectorAll(".reminder-time[data-reminder]").forEach(input => {
+    input.addEventListener("change", () => updateReminderTime(input.getAttribute("data-reminder"), input.value));
+  });
 }
 
 // === Utilities ===
@@ -1573,6 +2952,7 @@ function escMulti(s) {
 
 // === Boot ===
 render();
+scheduleReminders();
 </script>
 </body>
 </html>

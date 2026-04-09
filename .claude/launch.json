@@ -7,6 +7,12 @@
       "runtimeArgs": ["vite", "--port", "5174"],
       "port": 5174,
       "cwd": "client"
+    },
+    {
+      "name": "healthyblood-app",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["http-server", "healthyblood-app", "-p", "5180", "-c-1", "--silent"],
+      "port": 5180
     }
   ]
 }
