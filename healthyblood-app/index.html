@@ -611,6 +611,74 @@
   .lab-form-grid .field { margin-bottom: 0; }
   .lab-form-grid input { margin-bottom: 0; }
   .lab-form .field { margin-bottom: 14px; }
+  .cora-advice-btn {
+    background:
+      radial-gradient(circle at top right, rgba(74, 222, 128, 0.18), transparent 60%),
+      var(--bg-card) !important;
+    border: 1px solid rgba(74, 222, 128, 0.4) !important;
+    color: var(--accent-bright) !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    font-weight: 600 !important;
+  }
+  .cora-advice-btn:hover {
+    background:
+      radial-gradient(circle at top right, rgba(74, 222, 128, 0.25), transparent 60%),
+      var(--bg-card) !important;
+    border-color: rgba(74, 222, 128, 0.7) !important;
+  }
+  .cora-advice-avatar {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 30% 30%, var(--accent-bright), var(--accent-deep));
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: "Fraunces", serif;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--bg);
+    flex-shrink: 0;
+  }
+
+  /* === Recipe categories === */
+  .recipe-categories {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 12px;
+    margin-bottom: 14px;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  .recipe-categories::-webkit-scrollbar { display: none; }
+  .recipe-cat-pill {
+    flex-shrink: 0;
+    background: var(--bg-card);
+    border: 1px solid var(--border-soft);
+    color: var(--text-muted);
+    padding: 9px 16px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s;
+  }
+  .recipe-cat-pill.active {
+    background: linear-gradient(135deg, var(--accent-bright), var(--accent-deep));
+    border-color: var(--accent);
+    color: var(--bg);
+  }
+  .recipe-cat-count {
+    text-align: center;
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+  }
 
   /* === Recipes === */
   .recipe-card {
@@ -719,57 +787,90 @@
 
   /* === Cora Suggests === */
   .cora-suggests {
+    position: relative;
     background:
-      radial-gradient(circle at top right, rgba(74, 222, 128, 0.12), transparent 60%),
+      radial-gradient(circle at top right, rgba(74, 222, 128, 0.14), transparent 65%),
       var(--bg-card);
     border: 1px solid rgba(74, 222, 128, 0.3);
-    border-radius: 20px;
-    padding: 22px;
+    border-radius: 22px;
+    padding: 22px 22px 18px;
     margin-bottom: 16px;
+    overflow: hidden;
+  }
+  .cora-suggests::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    opacity: 0.7;
+  }
+  .cora-suggests-header {
     display: flex;
-    gap: 14px;
-    align-items: flex-start;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 14px;
   }
   .cora-suggests-avatar {
-    width: 44px;
-    height: 44px;
+    width: 38px;
+    height: 38px;
     border-radius: 50%;
     background: radial-gradient(circle at 30% 30%, var(--accent-bright), var(--accent-deep));
     display: flex;
     align-items: center;
     justify-content: center;
     font-family: "Fraunces", serif;
-    font-size: 20px;
+    font-size: 18px;
     font-weight: 700;
     color: var(--bg);
     flex-shrink: 0;
-    box-shadow: 0 4px 14px rgba(74, 222, 128, 0.3);
+    box-shadow: 0 4px 14px rgba(74, 222, 128, 0.35);
   }
-  .cora-suggests-content { flex: 1; min-width: 0; }
   .cora-suggests-eyebrow {
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 700;
     color: var(--accent);
     text-transform: uppercase;
-    letter-spacing: 1.2px;
-    margin-bottom: 4px;
+    letter-spacing: 1.4px;
   }
-  .cora-suggests-msg {
-    font-size: 14px;
+  .cora-suggests-message {
+    font-size: 15px;
     color: var(--text);
-    line-height: 1.5;
-    margin-bottom: 12px;
+    line-height: 1.55;
+    margin-bottom: 18px;
+  }
+  .cora-suggests-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
   }
   .cora-suggests-cta {
-    background: linear-gradient(135deg, var(--accent), var(--accent-deep));
+    flex: 1;
+    background: linear-gradient(135deg, var(--accent-bright), var(--accent-deep));
     color: var(--bg);
     border: none;
-    padding: 9px 16px;
-    border-radius: 10px;
-    font-size: 12px;
+    padding: 12px 18px;
+    border-radius: 12px;
+    font-size: 14px;
     font-weight: 700;
     cursor: pointer;
+    letter-spacing: 0.2px;
+    box-shadow: 0 4px 14px rgba(74, 222, 128, 0.25);
+    transition: transform 0.15s, box-shadow 0.15s;
   }
+  .cora-suggests-cta:active { transform: translateY(1px); }
+  .cora-suggests-dismiss {
+    background: transparent;
+    color: var(--text-muted);
+    border: 1px solid var(--border-soft);
+    padding: 12px 18px;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .cora-suggests-dismiss:hover { color: var(--text); border-color: var(--text-muted); }
 
   /* === Reminder settings === */
   .reminder-card {
@@ -1584,6 +1685,7 @@
 <body>
 <div class="app" id="app"></div>
 
+<script src="recipes.js"></script>
 <script>
 // =====================================================
 // HealthyBlood PWA — main app
@@ -1594,7 +1696,7 @@ const API = window.location.hostname === "localhost"
 
 // === Daily habits library ===
 const HABITS = [
-  { id: "drops",   icon: "💧", title: "Take HealthyBlood drops",  desc: "1 full dropper, with food" },
+  { id: "drops",   icon: "💧", title: "Take HealthyBlood drops",  desc: "2ml under the tongue, hold 30 seconds" },
   { id: "walk",    icon: "🚶", title: "Move for 20 minutes",       desc: "A walk after a meal works wonders" },
   { id: "water",   icon: "🥤", title: "Drink 8 glasses of water",  desc: "Hydration supports heart health" },
   { id: "veggies", icon: "🥗", title: "Eat 1 leafy-green meal",    desc: "Greens fuel cardiovascular wellness" },
@@ -1618,6 +1720,7 @@ const state = {
   // Health: lab results [{date:"2026-04-09", ldl:120, hdl:55, total:200, trig:140}, ...]
   labs: JSON.parse(localStorage.getItem("hb_labs") || "[]"),
   healthSubtab: "labs", // "labs" | "recipes"
+  recipeCategory: "all", // category filter for recipes
   selectedRecipe: null, // recipe id when viewing detail
   // Reminders: { drops:{enabled,time}, walk:{...}, water:{...}, sleep:{...} }
   reminders: JSON.parse(localStorage.getItem("hb_reminders") || '{"drops":{"enabled":false,"time":"09:00"},"walk":{"enabled":false,"time":"17:00"},"water":{"enabled":false,"time":"12:00"},"sleep":{"enabled":false,"time":"22:00"}}'),
@@ -1772,158 +1875,6 @@ async function apiGet(path) {
   if (!r.ok) throw new Error(data.error || data.message || `Error ${r.status}`);
   return data;
 }
-
-// === Recipes data ===
-const RECIPES = [
-  {
-    id: "oats",
-    emoji: "🥣",
-    title: "Berry Almond Overnight Oats",
-    time: "5 min prep",
-    calories: "320 cal",
-    summary: "A creamy, fiber-rich breakfast that helps escort cholesterol out of your body.",
-    benefit: "Soluble fiber from oats binds to LDL cholesterol in your gut. Berries add antioxidants that protect your arteries.",
-    ingredients: [
-      "1/2 cup rolled oats",
-      "1/2 cup unsweetened almond milk",
-      "1 tbsp chia seeds",
-      "1/4 cup mixed berries",
-      "1 tbsp slivered almonds",
-      "1 tsp honey or maple syrup",
-      "Pinch of cinnamon",
-    ],
-    instructions: [
-      "Combine oats, almond milk, and chia seeds in a jar.",
-      "Stir well, then top with berries, almonds, sweetener, and cinnamon.",
-      "Cover and refrigerate overnight (or at least 4 hours).",
-      "Enjoy cold in the morning. Add a splash more milk if too thick.",
-    ],
-  },
-  {
-    id: "salmon",
-    emoji: "🐟",
-    title: "Lemon Garlic Salmon",
-    time: "20 min",
-    calories: "380 cal",
-    summary: "Omega-3 rich salmon paired with heart-healthy olive oil and garlic.",
-    benefit: "Salmon's omega-3 fatty acids support healthy triglycerides. Garlic adds cardiovascular benefits that pair beautifully with HealthyBlood.",
-    ingredients: [
-      "1 salmon fillet (5 oz)",
-      "2 tbsp olive oil",
-      "2 cloves garlic, minced",
-      "1 lemon (juice + zest)",
-      "1 tsp dried oregano",
-      "Salt and pepper to taste",
-      "Fresh parsley for garnish",
-    ],
-    instructions: [
-      "Preheat oven to 400°F (200°C).",
-      "Whisk olive oil, garlic, lemon juice, zest, and oregano.",
-      "Place salmon on parchment-lined baking sheet. Brush with mixture.",
-      "Season with salt and pepper. Bake 12-15 minutes until flaky.",
-      "Garnish with parsley and serve with steamed greens.",
-    ],
-  },
-  {
-    id: "buddha",
-    emoji: "🥗",
-    title: "Mediterranean Buddha Bowl",
-    time: "15 min",
-    calories: "420 cal",
-    summary: "A colorful bowl of leafy greens, chickpeas, and olive oil.",
-    benefit: "Loaded with fiber, plant protein, and monounsaturated fats — the foundation of the Mediterranean diet linked to better heart health.",
-    ingredients: [
-      "2 cups baby spinach",
-      "1/2 cup cooked quinoa",
-      "1/2 cup chickpeas, drained",
-      "1/4 cucumber, diced",
-      "1/4 cup cherry tomatoes",
-      "2 tbsp hummus",
-      "1 tbsp olive oil",
-      "Squeeze of lemon",
-    ],
-    instructions: [
-      "Layer spinach in a bowl as the base.",
-      "Top with quinoa, chickpeas, cucumber, and tomatoes.",
-      "Add a generous spoonful of hummus.",
-      "Drizzle with olive oil and lemon juice.",
-      "Toss gently and enjoy.",
-    ],
-  },
-  {
-    id: "smoothie",
-    emoji: "🫐",
-    title: "Heart-Boost Smoothie",
-    time: "5 min",
-    calories: "260 cal",
-    summary: "A vibrant blend of berries, banana, and flaxseed for sustained energy.",
-    benefit: "Berries are packed with anthocyanins that support arterial health. Flaxseed adds plant-based omega-3s.",
-    ingredients: [
-      "1 cup frozen mixed berries",
-      "1/2 banana",
-      "1 cup unsweetened almond milk",
-      "1 tbsp ground flaxseed",
-      "1 tbsp almond butter",
-      "1/2 tsp vanilla extract",
-    ],
-    instructions: [
-      "Add all ingredients to a blender.",
-      "Blend on high until completely smooth, about 60 seconds.",
-      "Pour into a tall glass and enjoy immediately.",
-    ],
-  },
-  {
-    id: "lentil",
-    emoji: "🍲",
-    title: "Cozy Lentil Stew",
-    time: "35 min",
-    calories: "350 cal",
-    summary: "A warming, fiber-loaded stew that's gentle on the gut and heart.",
-    benefit: "Lentils are rich in soluble fiber and plant protein — both linked to healthier cholesterol levels.",
-    ingredients: [
-      "1 cup brown or green lentils",
-      "1 onion, diced",
-      "2 carrots, chopped",
-      "2 celery stalks, chopped",
-      "3 cloves garlic, minced",
-      "4 cups vegetable broth",
-      "1 can diced tomatoes",
-      "1 tsp cumin",
-      "Salt, pepper, fresh herbs",
-    ],
-    instructions: [
-      "Heat olive oil in a pot. Sauté onion, carrot, celery 5 min.",
-      "Add garlic and cumin. Stir until fragrant.",
-      "Add lentils, broth, and tomatoes. Bring to a boil.",
-      "Reduce heat, cover, simmer 25-30 min until lentils are tender.",
-      "Season to taste and finish with fresh herbs.",
-    ],
-  },
-  {
-    id: "avotoast",
-    emoji: "🥑",
-    title: "Avocado Toast with Seeds",
-    time: "5 min",
-    calories: "290 cal",
-    summary: "Creamy avocado on whole-grain toast — quick, satisfying, heart-friendly.",
-    benefit: "Avocado's monounsaturated fats support healthy HDL levels. Whole grains add fiber and slow-release energy.",
-    ingredients: [
-      "1 slice whole-grain sourdough",
-      "1/2 ripe avocado",
-      "1 tsp pumpkin seeds",
-      "1 tsp hemp hearts",
-      "Squeeze of lemon",
-      "Pinch of red pepper flakes",
-      "Salt and pepper",
-    ],
-    instructions: [
-      "Toast the bread until golden.",
-      "Mash avocado with lemon, salt, and pepper.",
-      "Spread thickly on toast.",
-      "Top with seeds and red pepper flakes. Eat right away.",
-    ],
-  },
-];
 
 // === Cora Suggests logic ===
 // Analyzes the past 7 days of habits and picks the most-skipped one.
@@ -2116,6 +2067,10 @@ function viewLabResults() {
           <label>Triglycerides<input type="number" id="lab-trig" placeholder="e.g. 140" min="0" max="1000"></label>
         </div>
         <button type="submit" class="btn full" style="margin-top:14px">Save Reading</button>
+        <button type="button" class="btn full cora-advice-btn" id="labCoraBtn" style="margin-top:10px">
+          <span class="cora-advice-avatar">C</span>
+          Save &amp; Get Cora's Advice
+        </button>
       </form>
     </div>
 
@@ -2169,26 +2124,67 @@ function renderLabChart(labs) {
   `;
 }
 
-function addLabEntry(e) {
-  e.preventDefault();
+function readLabFormEntry() {
   const date = document.getElementById("lab-date").value;
   const ldl = document.getElementById("lab-ldl").value;
   const hdl = document.getElementById("lab-hdl").value;
   const total = document.getElementById("lab-total").value;
   const trig = document.getElementById("lab-trig").value;
-  if (!date) return;
-  // Replace any existing entry on the same date
-  state.labs = state.labs.filter(l => l.date !== date);
-  state.labs.push({
+  if (!date) return null;
+  return {
     date,
     ldl: ldl ? Number(ldl) : null,
     hdl: hdl ? Number(hdl) : null,
     total: total ? Number(total) : null,
     trig: trig ? Number(trig) : null,
-  });
+  };
+}
+function saveLabEntry(entry) {
+  state.labs = state.labs.filter(l => l.date !== entry.date);
+  state.labs.push(entry);
   saveLabs();
+}
+function addLabEntry(e) {
+  e.preventDefault();
+  const entry = readLabFormEntry();
+  if (!entry) return;
+  saveLabEntry(entry);
   render();
 }
+function saveLabAndAskCora() {
+  const entry = readLabFormEntry();
+  if (!entry) { alert("Please enter a date."); return; }
+  const hasAny = entry.ldl || entry.hdl || entry.total || entry.trig;
+  if (!hasAny) { alert("Please fill in at least one reading."); return; }
+  saveLabEntry(entry);
+
+  // Build a natural-language message from the reading
+  const parts = [];
+  if (entry.ldl) parts.push(`LDL ${entry.ldl} mg/dL`);
+  if (entry.hdl) parts.push(`HDL ${entry.hdl} mg/dL`);
+  if (entry.total) parts.push(`total cholesterol ${entry.total} mg/dL`);
+  if (entry.trig) parts.push(`triglycerides ${entry.trig} mg/dL`);
+
+  // If we have prior readings, mention the trend
+  const priorLabs = [...state.labs].filter(l => l.date !== entry.date).sort((a,b) => a.date.localeCompare(b.date));
+  const prev = priorLabs[priorLabs.length - 1];
+  let trendText = "";
+  if (prev) {
+    const trends = [];
+    if (prev.ldl && entry.ldl) trends.push(`LDL ${entry.ldl - prev.ldl >= 0 ? "up" : "down"} ${Math.abs(entry.ldl - prev.ldl)}`);
+    if (prev.hdl && entry.hdl) trends.push(`HDL ${entry.hdl - prev.hdl >= 0 ? "up" : "down"} ${Math.abs(entry.hdl - prev.hdl)}`);
+    if (prev.total && entry.total) trends.push(`total ${entry.total - prev.total >= 0 ? "up" : "down"} ${Math.abs(entry.total - prev.total)}`);
+    if (prev.trig && entry.trig) trends.push(`triglycerides ${entry.trig - prev.trig >= 0 ? "up" : "down"} ${Math.abs(entry.trig - prev.trig)}`);
+    if (trends.length) trendText = ` Compared to my last reading on ${formatDate(prev.date)}: ${trends.join(", ")}.`;
+  }
+
+  const message = `I just logged my latest lab results on ${formatDate(entry.date)}: ${parts.join(", ")}.${trendText} Based on these numbers, what habits or lifestyle changes should I focus on right now? Please keep in mind I'm taking HealthyBlood daily.`;
+
+  state.tab = "chat";
+  render();
+  setTimeout(() => sendChat(message), 150);
+}
+window.saveLabAndAskCora = saveLabAndAskCora;
 function deleteLabEntry(date) {
   if (!confirm("Delete this lab reading?")) return;
   state.labs = state.labs.filter(l => l.date !== date);
@@ -2197,9 +2193,29 @@ function deleteLabEntry(date) {
 }
 window.deleteLabEntry = deleteLabEntry;
 
+const RECIPE_CATEGORIES = [
+  { id: "all",        label: "All" },
+  { id: "breakfast",  label: "Breakfast" },
+  { id: "lunch",      label: "Lunch" },
+  { id: "dinner",     label: "Dinner" },
+  { id: "snacks",     label: "Snacks" },
+  { id: "smoothies",  label: "Smoothies" },
+  { id: "salads",     label: "Salads" },
+  { id: "soups",      label: "Soups" },
+  { id: "sides",      label: "Sides" },
+];
+
 function viewRecipes() {
+  const cat = state.recipeCategory;
+  const filtered = cat === "all" ? RECIPES : RECIPES.filter(r => r.cat === cat);
   return `
-    ${RECIPES.map(r => `
+    <div class="recipe-categories">
+      ${RECIPE_CATEGORIES.map(c => `
+        <button class="recipe-cat-pill ${cat === c.id ? "active" : ""}" data-cat="${c.id}">${esc(c.label)}</button>
+      `).join("")}
+    </div>
+    <div class="recipe-cat-count">${filtered.length} recipe${filtered.length === 1 ? "" : "s"}</div>
+    ${filtered.map(r => `
       <div class="recipe-card" onclick="openRecipe('${r.id}')">
         <div class="recipe-header">
           <div class="recipe-emoji">${r.emoji}</div>
@@ -2924,9 +2940,19 @@ function bindEvents() {
     });
   });
 
+  // Recipe category pills
+  document.querySelectorAll(".recipe-cat-pill").forEach(b => {
+    b.addEventListener("click", () => {
+      state.recipeCategory = b.getAttribute("data-cat");
+      render();
+    });
+  });
+
   // Lab form submit
   const labForm = document.getElementById("labForm");
   if (labForm) labForm.addEventListener("submit", addLabEntry);
+  const labCoraBtn = document.getElementById("labCoraBtn");
+  if (labCoraBtn) labCoraBtn.addEventListener("click", saveLabAndAskCora);
 
   // Reminder toggles
   document.querySelectorAll(".toggle[data-toggle]").forEach(el => {
