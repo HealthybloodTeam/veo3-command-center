@@ -3,26 +3,44 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
-<meta name="theme-color" content="#0a1f14">
+<meta name="theme-color" content="#062818">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="HealthyBlood">
 <link rel="manifest" href="manifest.json">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Fraunces:wght@500;600;700;800&display=swap" rel="stylesheet">
 <title>HealthyBlood — Your Wellness Companion</title>
 <style>
+  :root {
+    --bg: #062818;
+    --bg-deep: #04190f;
+    --bg-card: #0c3422;
+    --bg-card-hover: #11402b;
+    --border: #16553a;
+    --border-soft: #0e3a26;
+    --accent: #4ade80;
+    --accent-bright: #6ee7a3;
+    --accent-deep: #16a34a;
+    --text: #f0fdf4;
+    --text-soft: #a8d5b9;
+    --text-muted: #6a9080;
+    --danger: #f87171;
+    --warning: #fbbf24;
+  }
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
   html, body {
     height: 100%;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
-    background: #0a1f14;
-    color: #f0fdf4;
+    font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: var(--bg-deep);
+    color: var(--text);
     overscroll-behavior-y: contain;
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
   body { display: flex; flex-direction: column; min-height: 100vh; min-height: 100dvh; }
   button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
   input, textarea { font-family: inherit; }
-  a { color: #4ade80; text-decoration: none; }
+  a { color: var(--accent); text-decoration: none; }
 
   /* === Layout === */
   .app {
@@ -32,54 +50,54 @@
     max-width: 480px;
     margin: 0 auto;
     width: 100%;
-    background: #0a1f14;
+    background: var(--bg);
     position: relative;
+    box-shadow: 0 0 60px rgba(0,0,0,0.5);
   }
+
+  /* === Header === */
   .header {
-    padding: 18px 20px 14px;
-    padding-top: calc(18px + env(safe-area-inset-top));
-    border-bottom: 1px solid #1a3a2e;
-    background: linear-gradient(180deg, #0f2818 0%, #0a1f14 100%);
+    padding: 24px 22px 20px;
+    padding-top: calc(24px + env(safe-area-inset-top));
+    background: linear-gradient(180deg, #08311e 0%, var(--bg) 100%);
     position: sticky;
     top: 0;
     z-index: 10;
+    border-bottom: 1px solid var(--border-soft);
   }
-  .header-row { display: flex; align-items: center; justify-content: space-between; }
-  .brand {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-size: 18px;
+  .wordmark {
+    font-family: "Fraunces", Georgia, serif;
+    font-size: 22px;
     font-weight: 700;
-    letter-spacing: -0.3px;
+    letter-spacing: -0.5px;
+    color: var(--text);
+    line-height: 1;
   }
-  .brand-logo {
-    width: 32px;
-    height: 32px;
-    background: linear-gradient(135deg, #22c55e, #4ade80);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 16px;
-    color: #0a1f14;
-    font-weight: 900;
-  }
-  .brand-text { color: #f0fdf4; }
-  .brand-text span { color: #4ade80; }
+  .wordmark .accent { color: var(--accent); font-style: italic; }
   .header-greeting {
     font-size: 13px;
-    color: #86b69a;
+    color: var(--text-soft);
+    margin-top: 8px;
+    font-weight: 500;
+  }
+  .header-subtitle {
+    font-size: 12px;
+    color: var(--text-muted);
     margin-top: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    font-weight: 600;
   }
 
+  /* === Main scroll === */
   .main {
     flex: 1;
     overflow-y: auto;
-    padding-bottom: calc(80px + env(safe-area-inset-bottom));
+    padding-bottom: calc(96px + env(safe-area-inset-bottom));
     -webkit-overflow-scrolling: touch;
   }
 
+  /* === Bottom Nav === */
   .nav {
     position: fixed;
     bottom: 0;
@@ -87,13 +105,13 @@
     transform: translateX(-50%);
     width: 100%;
     max-width: 480px;
-    background: rgba(15, 40, 24, 0.95);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border-top: 1px solid #1a3a2e;
+    background: rgba(6, 40, 24, 0.96);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border-top: 1px solid var(--border-soft);
     display: flex;
-    padding: 8px 0;
-    padding-bottom: calc(8px + env(safe-area-inset-bottom));
+    padding: 10px 8px;
+    padding-bottom: calc(10px + env(safe-area-inset-bottom));
     z-index: 20;
   }
   .nav button {
@@ -101,147 +119,152 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 4px;
+    gap: 5px;
     padding: 8px 4px;
-    color: #5a8a6f;
+    color: var(--text-muted);
     font-size: 11px;
     font-weight: 600;
-    transition: color 0.2s;
+    transition: color 0.2s, transform 0.1s;
+    position: relative;
   }
-  .nav button.active { color: #4ade80; }
+  .nav button.active { color: var(--accent); }
+  .nav button.active::before {
+    content: "";
+    position: absolute;
+    top: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 30px;
+    height: 3px;
+    background: var(--accent);
+    border-radius: 0 0 3px 3px;
+  }
   .nav-icon {
     width: 24px;
     height: 24px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 22px;
   }
+  .nav-icon svg { width: 22px; height: 22px; stroke-width: 2; }
 
-  /* === Cards & Sections === */
-  .section { padding: 20px; }
-  .section h2 {
-    font-size: 22px;
-    font-weight: 700;
-    margin-bottom: 4px;
-    letter-spacing: -0.4px;
-  }
-  .section .subtitle {
-    font-size: 14px;
-    color: #86b69a;
-    margin-bottom: 18px;
-  }
+  /* === Section === */
+  .section { padding: 22px 20px 30px; }
+
+  /* === Cards === */
   .card {
-    background: linear-gradient(180deg, #15321f 0%, #122a19 100%);
-    border: 1px solid #1f4d2d;
-    border-radius: 16px;
-    padding: 20px;
-    margin-bottom: 14px;
+    background: linear-gradient(180deg, var(--bg-card) 0%, #0a2e1d 100%);
+    border: 1px solid var(--border-soft);
+    border-radius: 20px;
+    padding: 22px;
+    margin-bottom: 16px;
+    transition: border-color 0.2s;
   }
-  .card-title {
-    font-size: 13px;
-    font-weight: 600;
-    color: #86b69a;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-bottom: 10px;
-  }
-
-  /* === Buttons === */
-  .btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    padding: 14px 22px;
-    background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
-    color: #0a1f14;
+  .card-eyebrow {
+    font-size: 11px;
     font-weight: 700;
-    font-size: 15px;
-    border-radius: 12px;
-    transition: transform 0.1s, box-shadow 0.2s;
-    box-shadow: 0 4px 14px rgba(34, 197, 94, 0.25);
-  }
-  .btn:active { transform: scale(0.97); }
-  .btn.full { width: 100%; }
-  .btn.ghost {
-    background: transparent;
-    border: 1px solid #1f4d2d;
-    color: #86b69a;
-    box-shadow: none;
-  }
-  .btn.danger {
-    background: linear-gradient(135deg, #ef4444, #dc2626);
-    color: #fff;
-    box-shadow: 0 4px 14px rgba(239, 68, 68, 0.2);
-  }
-  .btn.small { padding: 9px 14px; font-size: 13px; }
-
-  /* === Habit tracker === */
-  .check-circle {
-    width: 140px;
-    height: 140px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #15321f, #122a19);
-    border: 2px solid #1f4d2d;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 0 auto 16px;
-    position: relative;
-    transition: all 0.3s;
-  }
-  .check-circle.done {
-    background: linear-gradient(135deg, #22c55e, #16a34a);
-    border-color: #4ade80;
-    box-shadow: 0 0 40px rgba(34, 197, 94, 0.3);
-  }
-  .check-circle .check-icon {
-    font-size: 56px;
-    color: #1f4d2d;
-    transition: color 0.3s;
-  }
-  .check-circle.done .check-icon { color: #fff; }
-  .check-label {
-    text-align: center;
-    font-size: 16px;
-    font-weight: 600;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
     margin-bottom: 6px;
   }
-  .check-sub {
-    text-align: center;
+  .card-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 4px;
+    letter-spacing: -0.3px;
+  }
+  .card-sub {
     font-size: 13px;
-    color: #86b69a;
+    color: var(--text-muted);
+    line-height: 1.5;
+  }
+
+  /* === Hero progress card === */
+  .hero-card {
+    background:
+      radial-gradient(circle at top right, rgba(74, 222, 128, 0.12), transparent 60%),
+      linear-gradient(180deg, var(--bg-card) 0%, #0a2e1d 100%);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    padding: 26px 22px;
     margin-bottom: 18px;
+    position: relative;
+    overflow: hidden;
   }
-  .streak-row {
+  .hero-progress-row {
     display: flex;
-    justify-content: space-around;
-    gap: 8px;
-    padding: 16px 0;
+    align-items: center;
+    gap: 18px;
+    margin-bottom: 22px;
   }
-  .streak-stat {
-    text-align: center;
-    flex: 1;
+  .progress-ring {
+    position: relative;
+    width: 86px;
+    height: 86px;
+    flex-shrink: 0;
   }
-  .streak-stat .num {
-    font-size: 28px;
-    font-weight: 800;
-    color: #4ade80;
+  .progress-ring svg { transform: rotate(-90deg); }
+  .progress-ring .ring-bg { stroke: rgba(74, 222, 128, 0.12); }
+  .progress-ring .ring-fill {
+    stroke: var(--accent);
+    stroke-linecap: round;
+    transition: stroke-dashoffset 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    filter: drop-shadow(0 0 6px rgba(74, 222, 128, 0.4));
+  }
+  .progress-ring .ring-text {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-family: "Fraunces", serif;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text);
     line-height: 1;
   }
-  .streak-stat .label {
-    font-size: 11px;
-    color: #86b69a;
-    margin-top: 4px;
+  .progress-ring .ring-text small {
+    font-family: "Inter", sans-serif;
+    font-size: 9px;
+    font-weight: 700;
+    color: var(--text-muted);
     text-transform: uppercase;
-    letter-spacing: 0.4px;
+    letter-spacing: 0.5px;
+    margin-top: 2px;
   }
-  .week-dots {
+  .hero-stats {
+    flex: 1;
+  }
+  .hero-stats .label {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .hero-stats h2 {
+    font-family: "Fraunces", serif;
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1.15;
+    margin-bottom: 6px;
+    letter-spacing: -0.4px;
+  }
+  .hero-stats p {
+    font-size: 12px;
+    color: var(--text-soft);
+    line-height: 1.4;
+  }
+  .week-strip {
     display: flex;
     gap: 6px;
     justify-content: space-between;
-    margin-top: 12px;
+    padding-top: 18px;
+    border-top: 1px solid var(--border-soft);
   }
   .week-day {
     flex: 1;
@@ -250,52 +273,255 @@
   .week-day .dot {
     width: 32px;
     height: 32px;
-    border-radius: 50%;
-    background: #1a3a2e;
-    border: 2px solid #1f4d2d;
-    margin: 0 auto 4px;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.03);
+    border: 1.5px solid var(--border-soft);
+    margin: 0 auto 6px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 12px;
-    color: #5a8a6f;
+    font-size: 13px;
+    color: var(--text-muted);
+    font-weight: 700;
+    transition: all 0.2s;
+  }
+  .week-day .dot.partial {
+    background: rgba(74, 222, 128, 0.15);
+    border-color: rgba(74, 222, 128, 0.4);
+    color: var(--accent);
   }
   .week-day .dot.done {
-    background: linear-gradient(135deg, #22c55e, #16a34a);
-    border-color: #4ade80;
-    color: #fff;
+    background: linear-gradient(135deg, var(--accent), var(--accent-deep));
+    border-color: var(--accent);
+    color: var(--bg);
+    box-shadow: 0 4px 12px rgba(74, 222, 128, 0.25);
   }
   .week-day .dot.today {
-    border-color: #4ade80;
+    box-shadow: 0 0 0 2px rgba(74, 222, 128, 0.4);
   }
-  .week-day .label {
+  .week-day .day-label {
     font-size: 10px;
-    color: #5a8a6f;
-    text-transform: uppercase;
+    color: var(--text-muted);
     font-weight: 600;
-  }
-  .tip-card {
-    background: linear-gradient(135deg, #15321f, #1a3a2e);
-    border-left: 3px solid #4ade80;
-    border-radius: 10px;
-    padding: 14px 16px;
-    margin-top: 14px;
-  }
-  .tip-card .tip-label {
-    font-size: 11px;
-    font-weight: 700;
-    color: #4ade80;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-bottom: 6px;
-  }
-  .tip-card .tip-text {
-    font-size: 14px;
-    line-height: 1.5;
-    color: #d1fae5;
+    letter-spacing: 0.3px;
   }
 
-  /* === Chat === */
+  /* === Habit Checklist === */
+  .habit-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+  .habit-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 16px 4px;
+    border-bottom: 1px solid var(--border-soft);
+    cursor: pointer;
+    transition: background 0.15s;
+    user-select: none;
+  }
+  .habit-row:last-child { border-bottom: none; }
+  .habit-row:active { background: rgba(74, 222, 128, 0.04); }
+  .habit-checkbox {
+    width: 26px;
+    height: 26px;
+    border-radius: 9px;
+    border: 2px solid var(--border);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    background: rgba(0,0,0,0.2);
+  }
+  .habit-checkbox svg {
+    width: 16px;
+    height: 16px;
+    stroke: var(--bg);
+    stroke-width: 3.5;
+    fill: none;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    opacity: 0;
+    transform: scale(0.5);
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .habit-row.checked .habit-checkbox {
+    background: linear-gradient(135deg, var(--accent), var(--accent-deep));
+    border-color: var(--accent);
+    box-shadow: 0 4px 12px rgba(74, 222, 128, 0.3);
+  }
+  .habit-row.checked .habit-checkbox svg { opacity: 1; transform: scale(1); }
+  .habit-info { flex: 1; min-width: 0; }
+  .habit-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 2px;
+    transition: color 0.2s;
+  }
+  .habit-row.checked .habit-title {
+    color: var(--text-muted);
+    text-decoration: line-through;
+    text-decoration-color: rgba(168, 213, 185, 0.4);
+  }
+  .habit-desc {
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.4;
+  }
+  .habit-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    background: rgba(74, 222, 128, 0.08);
+    color: var(--accent);
+    font-size: 18px;
+  }
+
+  /* === Buttons === */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 15px 24px;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-deep) 100%);
+    color: var(--bg);
+    font-weight: 700;
+    font-size: 15px;
+    border-radius: 14px;
+    transition: transform 0.1s, box-shadow 0.2s;
+    box-shadow: 0 6px 20px rgba(34, 197, 94, 0.25);
+    letter-spacing: -0.1px;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn.full { width: 100%; }
+  .btn.ghost {
+    background: transparent;
+    border: 1.5px solid var(--border);
+    color: var(--text-soft);
+    box-shadow: none;
+  }
+  .btn.danger {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    color: #fff;
+    box-shadow: 0 6px 20px rgba(239, 68, 68, 0.2);
+  }
+  .btn.small { padding: 11px 16px; font-size: 13px; border-radius: 11px; }
+
+  /* === Tip card === */
+  .tip-card {
+    background: linear-gradient(135deg, rgba(74, 222, 128, 0.08), rgba(74, 222, 128, 0.02));
+    border: 1px solid rgba(74, 222, 128, 0.2);
+    border-radius: 16px;
+    padding: 18px 20px;
+    margin-bottom: 14px;
+    position: relative;
+  }
+  .tip-card::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 18px;
+    bottom: 18px;
+    width: 3px;
+    background: linear-gradient(180deg, var(--accent), var(--accent-deep));
+    border-radius: 0 3px 3px 0;
+  }
+  .tip-eyebrow {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    margin-bottom: 6px;
+  }
+  .tip-text {
+    font-size: 14px;
+    line-height: 1.55;
+    color: var(--text);
+    font-weight: 500;
+  }
+
+  /* === Chat (Cora) === */
+  .chat-container {
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 200px);
+    height: calc(100dvh - 200px);
+  }
+  .cora-header {
+    padding: 24px 22px 18px;
+    padding-top: calc(24px + env(safe-area-inset-top));
+    background: linear-gradient(180deg, #08311e 0%, var(--bg) 100%);
+    border-bottom: 1px solid var(--border-soft);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  .cora-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background:
+      radial-gradient(circle at 30% 30%, var(--accent-bright), var(--accent-deep));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: "Fraunces", serif;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--bg);
+    flex-shrink: 0;
+    box-shadow: 0 4px 16px rgba(74, 222, 128, 0.3);
+    position: relative;
+  }
+  .cora-avatar::after {
+    content: "";
+    position: absolute;
+    bottom: 2px;
+    right: 2px;
+    width: 12px;
+    height: 12px;
+    background: var(--accent-bright);
+    border: 2.5px solid var(--bg);
+    border-radius: 50%;
+  }
+  .cora-info { flex: 1; }
+  .cora-name {
+    font-family: "Fraunces", serif;
+    font-size: 19px;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1.1;
+    letter-spacing: -0.3px;
+  }
+  .cora-status {
+    font-size: 12px;
+    color: var(--text-soft);
+    margin-top: 3px;
+    font-weight: 500;
+  }
+  .cora-status .dot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    background: var(--accent);
+    border-radius: 50%;
+    margin-right: 5px;
+    box-shadow: 0 0 6px var(--accent);
+  }
+
   .chat-area {
     flex: 1;
     overflow-y: auto;
@@ -307,8 +533,8 @@
   }
   .chat-bubble {
     max-width: 82%;
-    padding: 12px 16px;
-    border-radius: 18px;
+    padding: 13px 17px;
+    border-radius: 20px;
     font-size: 15px;
     line-height: 1.5;
     word-wrap: break-word;
@@ -316,314 +542,420 @@
   }
   .chat-bubble.user {
     align-self: flex-end;
-    background: linear-gradient(135deg, #22c55e, #16a34a);
-    color: #0a1f14;
+    background: linear-gradient(135deg, var(--accent), var(--accent-deep));
+    color: var(--bg);
     border-bottom-right-radius: 6px;
     font-weight: 500;
+    box-shadow: 0 4px 14px rgba(74, 222, 128, 0.2);
   }
   .chat-bubble.ai {
     align-self: flex-start;
-    background: #15321f;
-    border: 1px solid #1f4d2d;
-    color: #f0fdf4;
+    background: var(--bg-card);
+    border: 1px solid var(--border-soft);
+    color: var(--text);
     border-bottom-left-radius: 6px;
   }
   .chat-bubble.thinking {
-    color: #86b69a;
+    color: var(--text-muted);
     font-style: italic;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .chat-bubble.thinking::before {
+    content: "";
+    width: 18px;
+    height: 18px;
+    border: 2.5px solid rgba(74, 222, 128, 0.2);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
   }
   .chat-input-bar {
     position: fixed;
-    bottom: calc(72px + env(safe-area-inset-bottom));
+    bottom: calc(76px + env(safe-area-inset-bottom));
     left: 50%;
     transform: translateX(-50%);
     width: 100%;
     max-width: 480px;
-    background: rgba(10, 31, 20, 0.95);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    padding: 12px 16px;
-    border-top: 1px solid #1a3a2e;
+    background: rgba(6, 40, 24, 0.96);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    padding: 14px 18px;
+    border-top: 1px solid var(--border-soft);
     display: flex;
     gap: 10px;
     z-index: 15;
   }
   .chat-input-bar input {
     flex: 1;
-    background: #15321f;
-    border: 1px solid #1f4d2d;
-    border-radius: 22px;
-    padding: 12px 18px;
-    color: #f0fdf4;
+    background: var(--bg-card);
+    border: 1.5px solid var(--border-soft);
+    border-radius: 24px;
+    padding: 13px 20px;
+    color: var(--text);
     font-size: 15px;
     outline: none;
+    transition: border-color 0.2s;
   }
-  .chat-input-bar input:focus { border-color: #4ade80; }
+  .chat-input-bar input:focus { border-color: var(--accent); }
   .chat-send {
-    width: 44px;
-    height: 44px;
+    width: 46px;
+    height: 46px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #22c55e, #16a34a);
-    color: #0a1f14;
+    background: linear-gradient(135deg, var(--accent), var(--accent-deep));
+    color: var(--bg);
     font-size: 20px;
     font-weight: 900;
     display: flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
+    box-shadow: 0 4px 14px rgba(74, 222, 128, 0.3);
   }
   .chat-empty {
     text-align: center;
-    padding: 40px 20px;
-    color: #86b69a;
+    padding: 24px 14px;
   }
-  .chat-empty .icon {
-    font-size: 48px;
-    margin-bottom: 12px;
+  .cora-intro {
+    margin: 10px auto 24px;
+    max-width: 320px;
   }
-  .chat-empty h3 {
-    color: #f0fdf4;
+  .cora-intro h3 {
+    font-family: "Fraunces", serif;
+    color: var(--text);
+    font-size: 22px;
+    font-weight: 700;
     margin-bottom: 8px;
-    font-size: 18px;
+    letter-spacing: -0.4px;
+  }
+  .cora-intro p {
+    font-size: 14px;
+    color: var(--text-soft);
+    line-height: 1.5;
   }
   .quick-questions {
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    margin-top: 20px;
+    gap: 10px;
+    margin-top: 8px;
   }
   .quick-q {
-    background: #15321f;
-    border: 1px solid #1f4d2d;
-    border-radius: 12px;
-    padding: 12px 16px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-soft);
+    border-radius: 14px;
+    padding: 14px 18px;
     font-size: 14px;
-    color: #d1fae5;
+    color: var(--text);
     text-align: left;
     transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-weight: 500;
+  }
+  .quick-q::after {
+    content: "→";
+    margin-left: auto;
+    color: var(--accent);
+    font-weight: 700;
+    transition: transform 0.2s;
   }
   .quick-q:hover, .quick-q:active {
-    background: #1a3a2e;
-    border-color: #4ade80;
+    background: var(--bg-card-hover);
+    border-color: var(--accent);
+    transform: translateX(2px);
   }
+  .quick-q:hover::after { transform: translateX(4px); }
 
   /* === Subscriptions === */
   .sub-card {
-    background: linear-gradient(180deg, #15321f, #122a19);
-    border: 1px solid #1f4d2d;
-    border-radius: 16px;
-    padding: 18px;
+    background: linear-gradient(180deg, var(--bg-card), #0a2e1d);
+    border: 1px solid var(--border-soft);
+    border-radius: 20px;
+    padding: 22px;
     margin-bottom: 14px;
   }
   .sub-header {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    margin-bottom: 14px;
+    margin-bottom: 18px;
   }
   .sub-title {
-    font-size: 16px;
+    font-family: "Fraunces", serif;
+    font-size: 18px;
     font-weight: 700;
-    color: #f0fdf4;
+    color: var(--text);
     margin-bottom: 4px;
+    letter-spacing: -0.3px;
   }
   .sub-meta {
     font-size: 13px;
-    color: #86b69a;
+    color: var(--text-muted);
   }
   .sub-status {
-    padding: 4px 10px;
-    border-radius: 12px;
-    font-size: 11px;
-    font-weight: 700;
+    padding: 5px 11px;
+    border-radius: 20px;
+    font-size: 10px;
+    font-weight: 800;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.8px;
   }
   .sub-status.active {
-    background: rgba(34, 197, 94, 0.15);
-    color: #4ade80;
-    border: 1px solid rgba(34, 197, 94, 0.3);
+    background: rgba(74, 222, 128, 0.12);
+    color: var(--accent);
+    border: 1px solid rgba(74, 222, 128, 0.3);
   }
   .sub-status.paused {
-    background: rgba(251, 191, 36, 0.15);
-    color: #fbbf24;
+    background: rgba(251, 191, 36, 0.12);
+    color: var(--warning);
     border: 1px solid rgba(251, 191, 36, 0.3);
   }
   .sub-status.cancelled {
-    background: rgba(239, 68, 68, 0.15);
-    color: #f87171;
+    background: rgba(239, 68, 68, 0.12);
+    color: var(--danger);
     border: 1px solid rgba(239, 68, 68, 0.3);
   }
   .sub-detail {
     display: flex;
     justify-content: space-between;
-    padding: 8px 0;
+    padding: 12px 0;
     font-size: 14px;
-    border-top: 1px solid #1a3a2e;
+    border-top: 1px solid var(--border-soft);
   }
-  .sub-detail .key { color: #86b69a; }
-  .sub-detail .val { color: #f0fdf4; font-weight: 600; }
+  .sub-detail .key { color: var(--text-muted); font-weight: 500; }
+  .sub-detail .val { color: var(--text); font-weight: 600; }
   .sub-actions {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 8px;
-    margin-top: 14px;
+    gap: 10px;
+    margin-top: 16px;
   }
 
   /* === Profile === */
   .profile-card {
     text-align: center;
-    padding: 30px 20px;
+    padding: 32px 22px;
   }
   .avatar {
-    width: 80px;
-    height: 80px;
+    width: 84px;
+    height: 84px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #22c55e, #16a34a);
+    background:
+      radial-gradient(circle at 30% 30%, var(--accent-bright), var(--accent-deep));
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 32px;
-    font-weight: 800;
-    color: #0a1f14;
-    margin: 0 auto 14px;
+    font-family: "Fraunces", serif;
+    font-size: 36px;
+    font-weight: 700;
+    color: var(--bg);
+    margin: 0 auto 16px;
+    box-shadow: 0 8px 24px rgba(74, 222, 128, 0.3);
   }
   .profile-email {
     font-size: 16px;
     font-weight: 600;
-    color: #f0fdf4;
+    color: var(--text);
     margin-bottom: 4px;
   }
   .profile-since {
-    font-size: 13px;
-    color: #86b69a;
+    font-size: 12px;
+    color: var(--text-muted);
     margin-bottom: 22px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+  }
+  .profile-stats {
+    display: flex;
+    gap: 12px;
+    padding: 18px 0 0;
+    border-top: 1px solid var(--border-soft);
+    margin-top: 4px;
+  }
+  .profile-stat {
+    flex: 1;
+    text-align: center;
+  }
+  .profile-stat .num {
+    font-family: "Fraunces", serif;
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--accent);
+    line-height: 1;
+  }
+  .profile-stat .label {
+    font-size: 10px;
+    color: var(--text-muted);
+    margin-top: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    font-weight: 700;
   }
   .profile-row {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 16px 18px;
-    background: #15321f;
-    border: 1px solid #1f4d2d;
-    border-radius: 12px;
+    padding: 18px 20px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-soft);
+    border-radius: 14px;
     margin-bottom: 10px;
     cursor: pointer;
+    transition: all 0.15s;
   }
-  .profile-row:active { background: #1a3a2e; }
+  .profile-row:active { background: var(--bg-card-hover); transform: scale(0.99); }
   .profile-row .label {
     font-size: 14px;
     font-weight: 600;
-    color: #f0fdf4;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 12px;
   }
-  .profile-row .arrow { color: #5a8a6f; font-size: 18px; }
+  .profile-row .label-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 9px;
+    background: rgba(74, 222, 128, 0.08);
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+  }
+  .profile-row .arrow { color: var(--text-muted); font-size: 18px; font-weight: 300; }
 
-  /* === Welcome screen === */
+  /* === Welcome === */
   .welcome {
     flex: 1;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 40px 24px;
+    padding: 50px 28px;
     text-align: center;
-    background: radial-gradient(ellipse at center, #15321f 0%, #0a1f14 70%);
+    background:
+      radial-gradient(ellipse at top, rgba(74, 222, 128, 0.08), transparent 60%),
+      var(--bg-deep);
   }
-  .welcome-logo {
-    width: 80px;
-    height: 80px;
-    background: linear-gradient(135deg, #22c55e, #4ade80);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 36px;
-    color: #0a1f14;
-    font-weight: 900;
-    margin-bottom: 20px;
-    box-shadow: 0 0 60px rgba(34, 197, 94, 0.3);
+  .welcome-eyebrow {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 14px;
   }
   .welcome h1 {
-    font-size: 28px;
-    font-weight: 800;
-    margin-bottom: 8px;
-    letter-spacing: -0.5px;
+    font-family: "Fraunces", serif;
+    font-size: 36px;
+    font-weight: 700;
+    margin-bottom: 14px;
+    letter-spacing: -1px;
+    line-height: 1.05;
   }
-  .welcome h1 span { color: #4ade80; }
+  .welcome h1 .accent { color: var(--accent); font-style: italic; }
   .welcome p {
     font-size: 15px;
-    color: #86b69a;
-    margin-bottom: 32px;
-    line-height: 1.5;
-    max-width: 320px;
+    color: var(--text-soft);
+    margin-bottom: 36px;
+    line-height: 1.6;
+    max-width: 340px;
   }
   .welcome-input {
     width: 100%;
-    max-width: 320px;
-    background: #15321f;
-    border: 1.5px solid #1f4d2d;
-    border-radius: 12px;
-    padding: 14px 18px;
-    color: #f0fdf4;
+    max-width: 340px;
+    background: var(--bg-card);
+    border: 1.5px solid var(--border);
+    border-radius: 14px;
+    padding: 16px 20px;
+    color: var(--text);
     font-size: 15px;
     outline: none;
     margin-bottom: 12px;
     text-align: center;
+    font-weight: 500;
+    transition: border-color 0.2s;
   }
-  .welcome-input:focus { border-color: #4ade80; }
+  .welcome-input:focus { border-color: var(--accent); }
   .welcome-disclaimer {
     font-size: 11px;
-    color: #5a8a6f;
-    margin-top: 24px;
-    max-width: 280px;
-    line-height: 1.5;
+    color: var(--text-muted);
+    margin-top: 28px;
+    max-width: 300px;
+    line-height: 1.6;
   }
 
+  /* === Empty state === */
   .empty-state {
     text-align: center;
-    padding: 50px 20px;
-    color: #86b69a;
+    padding: 60px 24px;
+    color: var(--text-soft);
   }
-  .empty-state .icon { font-size: 48px; margin-bottom: 14px; }
-  .empty-state h3 { color: #f0fdf4; font-size: 17px; margin-bottom: 6px; }
-  .empty-state p { font-size: 14px; line-height: 1.5; }
+  .empty-state .icon {
+    font-size: 44px;
+    margin-bottom: 16px;
+    opacity: 0.6;
+  }
+  .empty-state h3 {
+    font-family: "Fraunces", serif;
+    color: var(--text);
+    font-size: 19px;
+    margin-bottom: 8px;
+    font-weight: 700;
+  }
+  .empty-state p {
+    font-size: 14px;
+    line-height: 1.6;
+    margin-bottom: 20px;
+  }
 
+  /* === Banners === */
+  .error-banner, .success-banner {
+    padding: 13px 17px;
+    border-radius: 12px;
+    font-size: 13px;
+    margin-bottom: 16px;
+    font-weight: 500;
+  }
   .error-banner {
     background: rgba(239, 68, 68, 0.1);
     border: 1px solid rgba(239, 68, 68, 0.3);
-    color: #f87171;
-    padding: 12px 16px;
-    border-radius: 10px;
-    font-size: 13px;
-    margin-bottom: 14px;
+    color: var(--danger);
   }
   .success-banner {
-    background: rgba(34, 197, 94, 0.1);
-    border: 1px solid rgba(34, 197, 94, 0.3);
-    color: #4ade80;
-    padding: 12px 16px;
-    border-radius: 10px;
-    font-size: 13px;
-    margin-bottom: 14px;
+    background: rgba(74, 222, 128, 0.1);
+    border: 1px solid rgba(74, 222, 128, 0.3);
+    color: var(--accent);
   }
 
+  /* === Spinner === */
   .spinner {
     display: inline-block;
-    width: 20px;
-    height: 20px;
+    width: 22px;
+    height: 22px;
     border: 2.5px solid rgba(74, 222, 128, 0.2);
-    border-top-color: #4ade80;
+    border-top-color: var(--accent);
     border-radius: 50%;
     animation: spin 0.8s linear infinite;
   }
   @keyframes spin { to { transform: rotate(360deg); } }
-
   .loading-state {
     text-align: center;
-    padding: 50px 20px;
-    color: #86b69a;
+    padding: 60px 20px;
+    color: var(--text-soft);
   }
-  .loading-state .spinner { margin-bottom: 14px; }
+  .loading-state .spinner { margin-bottom: 16px; }
+
+  @keyframes celebrate {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.15); }
+    100% { transform: scale(1); }
+  }
+  .celebrate { animation: celebrate 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
 </style>
 </head>
 <body>
@@ -637,22 +969,33 @@ const API = window.location.hostname === "localhost"
   ? "http://localhost:3001/api"
   : "https://veo3-command-center.onrender.com/api";
 
+// === Daily habits library ===
+const HABITS = [
+  { id: "drops",   icon: "💧", title: "Take HealthyBlood drops",  desc: "1 full dropper, with food" },
+  { id: "walk",    icon: "🚶", title: "Move for 20 minutes",       desc: "A walk after a meal works wonders" },
+  { id: "water",   icon: "🥤", title: "Drink 8 glasses of water",  desc: "Hydration supports heart health" },
+  { id: "veggies", icon: "🥗", title: "Eat 1 leafy-green meal",    desc: "Greens fuel cardiovascular wellness" },
+  { id: "sleep",   icon: "😴", title: "Sleep 7+ hours tonight",    desc: "Rest is when your body repairs" },
+  { id: "noproc",  icon: "🚫", title: "Skip processed & fried",    desc: "Real food, real results" },
+];
+
 // === State ===
 const state = {
   email: localStorage.getItem("hb_email") || "",
   tab: "home",
-  habits: JSON.parse(localStorage.getItem("hb_habits") || "{}"), // { "2026-04-09": true }
+  // Habits stored as { "2026-04-09": { drops: true, walk: true, ... } }
+  habits: JSON.parse(localStorage.getItem("hb_habits_v2") || "{}"),
   chat: JSON.parse(localStorage.getItem("hb_chat") || "[]"),
   chatBusy: false,
   subs: null,
   subsLoading: false,
   subsError: null,
-  actionBusy: null, // subscription id currently being acted on
-  banner: null, // {type, msg}
+  actionBusy: null,
+  banner: null,
 };
 
 // === Storage helpers ===
-const saveHabits = () => localStorage.setItem("hb_habits", JSON.stringify(state.habits));
+const saveHabits = () => localStorage.setItem("hb_habits_v2", JSON.stringify(state.habits));
 const saveChat = () => localStorage.setItem("hb_chat", JSON.stringify(state.chat));
 const saveEmail = (e) => { state.email = e; localStorage.setItem("hb_email", e); };
 
@@ -666,19 +1009,33 @@ const dayKey = (offset) => {
   d.setDate(d.getDate() + offset);
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
 };
+const habitsForDay = (key) => state.habits[key] || {};
+const dayCompleted = (key) => {
+  const h = habitsForDay(key);
+  return HABITS.every(habit => h[habit.id]);
+};
+const dayHasAny = (key) => {
+  const h = habitsForDay(key);
+  return HABITS.some(habit => h[habit.id]);
+};
+const dayPercent = (key) => {
+  const h = habitsForDay(key);
+  const done = HABITS.filter(habit => h[habit.id]).length;
+  return Math.round((done / HABITS.length) * 100);
+};
 const calcStreak = () => {
   let s = 0;
   for (let i = 0; i < 365; i++) {
-    if (state.habits[dayKey(-i)]) s++;
+    if (dayCompleted(dayKey(-i))) s++;
     else if (i > 0) break;
   }
   return s;
 };
-const calcTotalDays = () => Object.keys(state.habits).filter(k => state.habits[k]).length;
+const calcTotalDays = () => Object.keys(state.habits).filter(k => dayCompleted(k)).length;
 
 // === Daily tips ===
 const TIPS = [
-  "Take HealthyBlood at the same time each day for best absorption.",
+  "Take HealthyBlood at the same time each day for the smoothest absorption.",
   "Pair your daily dropper with a glass of water and a 20-minute walk.",
   "Consistency matters more than perfection — small daily wins compound.",
   "Try mixing your drops with a splash of orange juice if you prefer the taste.",
@@ -715,15 +1072,15 @@ async function apiGet(path) {
   return data;
 }
 
-// === Welcome / Auth ===
+// === Welcome ===
 function viewWelcome() {
   return `
     <div class="welcome">
-      <div class="welcome-logo">HB</div>
-      <h1>Welcome to <span>HealthyBlood</span></h1>
-      <p>Your daily wellness companion for getting the most out of HealthyBlood™ Cholesterol Cleanse.</p>
-      <input class="welcome-input" id="welcomeEmail" type="email" placeholder="Your email address" autocomplete="email">
-      <button class="btn full" id="welcomeBtn" style="max-width:320px">Get Started</button>
+      <div class="welcome-eyebrow">HealthyBlood™</div>
+      <h1>Welcome to your <span class="accent">wellness</span> companion.</h1>
+      <p>Build healthy habits, manage your subscription, and chat with Cora — your personal wellness coach.</p>
+      <input class="welcome-input" id="welcomeEmail" type="email" placeholder="your@email.com" autocomplete="email">
+      <button class="btn full" id="welcomeBtn" style="max-width:340px">Continue</button>
       <p class="welcome-disclaimer">
         We use your email to find your active subscriptions and personalize your experience. We never share it.
       </p>
@@ -734,13 +1091,16 @@ function viewWelcome() {
 // === Home / Habit tracker ===
 function viewHome() {
   const today = todayKey();
-  const checkedToday = !!state.habits[today];
+  const todayHabits = habitsForDay(today);
+  const completedToday = HABITS.filter(h => todayHabits[h.id]).length;
+  const totalHabits = HABITS.length;
+  const percent = Math.round((completedToday / totalHabits) * 100);
   const streak = calcStreak();
   const totalDays = calcTotalDays();
   const firstName = state.email ? state.email.split("@")[0].split(/[._]/)[0] : "friend";
   const greeting = getGreeting();
 
-  // Last 7 days
+  // 7-day strip
   const days = [];
   for (let i = 6; i >= 0; i--) {
     const k = dayKey(-i);
@@ -749,54 +1109,89 @@ function viewHome() {
     days.push({
       key: k,
       label: d.toLocaleDateString("en-US", { weekday: "short" }).slice(0, 1),
-      done: !!state.habits[k],
+      done: dayCompleted(k),
+      partial: !dayCompleted(k) && dayHasAny(k),
       today: i === 0,
     });
   }
 
+  // Progress ring math
+  const radius = 36;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference - (percent / 100) * circumference;
+
+  const headline = percent === 100
+    ? "Today is complete! 🎉"
+    : percent >= 50
+      ? "You're crushing it today."
+      : completedToday > 0
+        ? "Great start. Keep going."
+        : "Let's start your day strong.";
+
   return `
     <div class="header">
-      <div class="header-row">
-        <div class="brand">
-          <div class="brand-logo">HB</div>
-          <div>
-            <div class="brand-text">Healthy<span>Blood</span></div>
-          </div>
-        </div>
-      </div>
-      <div class="header-greeting">${greeting}, ${esc(capitalize(firstName))} 🌿</div>
+      <div class="wordmark">Healthy<span class="accent">Blood</span></div>
+      <div class="header-greeting">${greeting}, ${esc(capitalize(firstName))}</div>
+      <div class="header-subtitle">Today · ${formatDate(today)}</div>
     </div>
+
     <div class="section">
-      <div class="card">
-        <div class="check-circle ${checkedToday ? "done" : ""}" id="checkCircle">
-          <div class="check-icon">${checkedToday ? "✓" : "○"}</div>
-        </div>
-        <div class="check-label">${checkedToday ? "You're all set for today!" : "Did you take your drops today?"}</div>
-        <div class="check-sub">${checkedToday ? "Great work staying consistent." : "Tap the circle to check in."}</div>
-
-        <div class="streak-row">
-          <div class="streak-stat">
-            <div class="num">${streak}</div>
-            <div class="label">Day Streak</div>
+      <div class="hero-card">
+        <div class="hero-progress-row">
+          <div class="progress-ring">
+            <svg width="86" height="86">
+              <circle class="ring-bg" cx="43" cy="43" r="${radius}" fill="none" stroke-width="6"/>
+              <circle class="ring-fill" cx="43" cy="43" r="${radius}" fill="none" stroke-width="6"
+                stroke-dasharray="${circumference}" stroke-dashoffset="${offset}"/>
+            </svg>
+            <div class="ring-text">
+              ${completedToday}/${totalHabits}
+              <small>Done</small>
+            </div>
           </div>
-          <div class="streak-stat">
-            <div class="num">${totalDays}</div>
-            <div class="label">Total Days</div>
+          <div class="hero-stats">
+            <div class="label">Today's Progress</div>
+            <h2>${headline}</h2>
+            <p>${streak > 0 ? `🔥 ${streak}-day streak · ` : ""}${totalDays} total days complete</p>
           </div>
         </div>
 
-        <div class="week-dots">
+        <div class="week-strip">
           ${days.map(d => `
             <div class="week-day">
-              <div class="dot ${d.done ? "done" : ""} ${d.today ? "today" : ""}">${d.done ? "✓" : ""}</div>
-              <div class="label">${d.label}</div>
+              <div class="dot ${d.done ? "done" : ""} ${d.partial ? "partial" : ""} ${d.today ? "today" : ""}">${d.done ? "✓" : d.partial ? "·" : ""}</div>
+              <div class="day-label">${d.label}</div>
             </div>
           `).join("")}
         </div>
       </div>
 
+      <div class="card">
+        <div class="card-eyebrow">Daily Habits</div>
+        <div class="card-title">Build your routine</div>
+        <div class="card-sub" style="margin-bottom:12px">Tap each habit when you complete it. Small wins, big results.</div>
+
+        <div class="habit-list">
+          ${HABITS.map(h => {
+            const checked = todayHabits[h.id];
+            return `
+              <div class="habit-row ${checked ? "checked" : ""}" data-habit="${h.id}">
+                <div class="habit-icon">${h.icon}</div>
+                <div class="habit-info">
+                  <div class="habit-title">${esc(h.title)}</div>
+                  <div class="habit-desc">${esc(h.desc)}</div>
+                </div>
+                <div class="habit-checkbox">
+                  <svg viewBox="0 0 24 24"><path d="M5 12l5 5L20 7"/></svg>
+                </div>
+              </div>
+            `;
+          }).join("")}
+        </div>
+      </div>
+
       <div class="tip-card">
-        <div class="tip-label">💡 Tip of the day</div>
+        <div class="tip-eyebrow">💡 Tip of the day</div>
         <div class="tip-text">${esc(dailyTip())}</div>
       </div>
     </div>
@@ -810,36 +1205,37 @@ function getGreeting() {
 }
 function capitalize(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : ""; }
 
-// === Chat ===
+// === Cora Chat ===
 function viewChat() {
   const empty = state.chat.length === 0;
   return `
-    <div class="header">
-      <div class="brand">
-        <div class="brand-logo">HB</div>
-        <div class="brand-text">AI Wellness Coach</div>
+    <div class="cora-header">
+      <div class="cora-avatar">C</div>
+      <div class="cora-info">
+        <div class="cora-name">Cora</div>
+        <div class="cora-status"><span class="dot"></span>Your wellness coach · always here</div>
       </div>
-      <div class="header-greeting">Ask me anything about HealthyBlood or wellness</div>
     </div>
     <div class="chat-area" id="chatArea">
       ${empty ? `
         <div class="chat-empty">
-          <div class="icon">💬</div>
-          <h3>Hi! I'm your wellness coach.</h3>
-          <p>Ask me about HealthyBlood, healthy habits, or how to get the best results from your daily routine.</p>
+          <div class="cora-intro">
+            <h3>Hi, I'm Cora 🌿</h3>
+            <p>Ask me anything about HealthyBlood, daily wellness habits, or how to get the best results from your routine.</p>
+          </div>
           <div class="quick-questions">
-            <button class="quick-q" data-q="How should I take my HealthyBlood drops?">How should I take my drops?</button>
+            <button class="quick-q" data-q="How should I take my HealthyBlood drops for the best results?">How do I take my drops?</button>
             <button class="quick-q" data-q="What's the best time of day to take HealthyBlood?">Best time of day to take it?</button>
-            <button class="quick-q" data-q="How long until I notice results?">How long until I notice results?</button>
-            <button class="quick-q" data-q="What habits should I pair with HealthyBlood for the best results?">Best habits to pair with it?</button>
+            <button class="quick-q" data-q="How long until I notice results from HealthyBlood?">When will I notice results?</button>
+            <button class="quick-q" data-q="What habits should I pair with HealthyBlood for the best heart health results?">Best habits to pair with it?</button>
           </div>
         </div>
       ` : state.chat.map(m => `
-        <div class="chat-bubble ${m.role}">${escMulti(m.content)}</div>
-      `).join("") + (state.chatBusy ? `<div class="chat-bubble ai thinking">Thinking…</div>` : "")}
+        <div class="chat-bubble ${m.role === "user" ? "user" : "ai"}">${escMulti(m.content)}</div>
+      `).join("") + (state.chatBusy ? `<div class="chat-bubble ai thinking">Cora is thinking…</div>` : "")}
     </div>
     <div class="chat-input-bar">
-      <input id="chatInput" type="text" placeholder="Ask anything…" autocomplete="off">
+      <input id="chatInput" type="text" placeholder="Ask Cora anything…" autocomplete="off">
       <button class="chat-send" id="chatSend">→</button>
     </div>
   `;
@@ -851,7 +1247,6 @@ async function sendChat(text) {
   state.chatBusy = true;
   saveChat(); render();
 
-  // Auto-scroll
   setTimeout(() => {
     const area = document.getElementById("chatArea");
     if (area) area.scrollTop = area.scrollHeight;
@@ -876,10 +1271,7 @@ async function sendChat(text) {
 function viewSubs() {
   return `
     <div class="header">
-      <div class="brand">
-        <div class="brand-logo">HB</div>
-        <div class="brand-text">My Subscription</div>
-      </div>
+      <div class="wordmark">My <span class="accent">Subscription</span></div>
       <div class="header-greeting">Manage your HealthyBlood deliveries</div>
     </div>
     <div class="section">
@@ -902,8 +1294,7 @@ function renderSubsContent() {
         <div class="icon">📦</div>
         <h3>No active subscriptions</h3>
         <p>We couldn't find any subscriptions tied to <strong>${esc(state.email)}</strong>.</p>
-        <br>
-        <a class="btn" href="https://www.tryhealthyblood.com" target="_blank">Browse Products</a>
+        <a class="btn" href="https://www.tryhealthyblood.com" target="_blank">Browse HealthyBlood</a>
       </div>
     `;
   }
@@ -940,7 +1331,7 @@ function renderSubCard(sub) {
       ${!isCancelled ? `
         <div class="sub-actions">
           ${busy ? `
-            <div style="grid-column:1/-1;text-align:center;padding:10px"><span class="spinner"></span></div>
+            <div style="grid-column:1/-1;text-align:center;padding:14px"><span class="spinner"></span></div>
           ` : isPaused ? `
             <button class="btn small" onclick="subAction('${sub.id}','resume')">▶ Resume</button>
             <button class="btn small danger" onclick="subAction('${sub.id}','cancel')">Cancel</button>
@@ -992,47 +1383,44 @@ function viewProfile() {
 
   return `
     <div class="header">
-      <div class="brand">
-        <div class="brand-logo">HB</div>
-        <div class="brand-text">Profile</div>
-      </div>
-      <div class="header-greeting">Your account</div>
+      <div class="wordmark"><span class="accent">Your</span> Profile</div>
+      <div class="header-greeting">Account & preferences</div>
     </div>
     <div class="section">
       <div class="card profile-card">
         <div class="avatar">${initial}</div>
         <div class="profile-email">${esc(state.email)}</div>
         <div class="profile-since">Member since ${formatDate(sinceDate)}</div>
-        <div class="streak-row" style="margin-top:10px">
-          <div class="streak-stat">
+        <div class="profile-stats">
+          <div class="profile-stat">
             <div class="num">${calcStreak()}</div>
-            <div class="label">Streak</div>
+            <div class="label">Day Streak</div>
           </div>
-          <div class="streak-stat">
+          <div class="profile-stat">
             <div class="num">${calcTotalDays()}</div>
-            <div class="label">Total Days</div>
+            <div class="label">Days Complete</div>
           </div>
         </div>
       </div>
 
       <div class="profile-row" onclick="window.open('https://www.tryhealthyblood.com','_blank')">
-        <div class="label">🛒 Shop HealthyBlood</div>
+        <div class="label"><span class="label-icon">🛒</span>Shop HealthyBlood</div>
         <div class="arrow">›</div>
       </div>
       <div class="profile-row" onclick="window.open('mailto:support@tryhealthyblood.com')">
-        <div class="label">📧 Contact Support</div>
+        <div class="label"><span class="label-icon">✉️</span>Contact Support</div>
         <div class="arrow">›</div>
       </div>
       <div class="profile-row" onclick="clearChat()">
-        <div class="label">🗑️ Clear chat history</div>
+        <div class="label"><span class="label-icon">💬</span>Clear chat with Cora</div>
         <div class="arrow">›</div>
       </div>
-      <div class="profile-row" onclick="logout()" style="margin-top:20px;border-color:rgba(239,68,68,0.3)">
-        <div class="label" style="color:#f87171">Sign out</div>
+      <div class="profile-row" onclick="logout()" style="margin-top:24px;border-color:rgba(239,68,68,0.25)">
+        <div class="label" style="color:var(--danger)"><span class="label-icon" style="background:rgba(239,68,68,0.1);color:var(--danger)">⏻</span>Sign out</div>
         <div class="arrow">›</div>
       </div>
 
-      <p style="text-align:center;color:#5a8a6f;font-size:11px;margin-top:30px;line-height:1.5">
+      <p style="text-align:center;color:var(--text-muted);font-size:11px;margin-top:30px;line-height:1.6;padding:0 20px">
         HealthyBlood™ statements have not been evaluated by the FDA.<br>
         This product is not intended to diagnose, treat, cure, or prevent any disease.<br>
         Always consult your physician.
@@ -1053,7 +1441,7 @@ function logout() {
   }
 }
 function clearChat() {
-  if (confirm("Clear your chat history with the AI assistant?")) {
+  if (confirm("Clear your chat history with Cora?")) {
     state.chat = [];
     saveChat();
     render();
@@ -1062,13 +1450,13 @@ function clearChat() {
 window.logout = logout;
 window.clearChat = clearChat;
 
-// === Bottom Nav ===
+// === Bottom Nav (icon-based, no HB logo) ===
 function viewNav() {
   const tabs = [
-    { id: "home", icon: "🌿", label: "Home" },
-    { id: "chat", icon: "💬", label: "Coach" },
-    { id: "subs", icon: "📦", label: "Subs" },
-    { id: "profile", icon: "👤", label: "You" },
+    { id: "home",    label: "Today",   icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 12L12 3l9 9M5 10v10h14V10" stroke-linecap="round" stroke-linejoin="round"/></svg>` },
+    { id: "chat",    label: "Cora",    icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 21l1.9-5.4A8 8 0 1 1 21 12Z" stroke-linecap="round" stroke-linejoin="round"/></svg>` },
+    { id: "subs",    label: "Plan",    icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 8V21H3V8M1 3h22v5H1zM10 12h4" stroke-linecap="round" stroke-linejoin="round"/></svg>` },
+    { id: "profile", label: "You",     icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0" stroke-linecap="round"/></svg>` },
   ];
   return `
     <div class="nav">
@@ -1082,7 +1470,7 @@ function viewNav() {
   `;
 }
 
-// === Main render ===
+// === Render ===
 function render() {
   const root = document.getElementById("app");
 
@@ -1108,7 +1496,7 @@ function bindWelcome() {
   const submit = () => {
     const v = input.value.trim();
     if (!v || !v.includes("@")) {
-      input.style.borderColor = "#ef4444";
+      input.style.borderColor = "var(--danger)";
       input.focus();
       return;
     }
@@ -1132,16 +1520,17 @@ function bindEvents() {
     });
   });
 
-  // Habit check circle
-  const circle = document.getElementById("checkCircle");
-  if (circle) {
-    circle.addEventListener("click", () => {
-      const t = todayKey();
-      state.habits[t] = !state.habits[t];
+  // Habit checkboxes
+  document.querySelectorAll(".habit-row").forEach(row => {
+    row.addEventListener("click", () => {
+      const id = row.getAttribute("data-habit");
+      const today = todayKey();
+      if (!state.habits[today]) state.habits[today] = {};
+      state.habits[today][id] = !state.habits[today][id];
       saveHabits();
       render();
     });
-  }
+  });
 
   // Chat input
   const chatInput = document.getElementById("chatInput");
