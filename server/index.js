@@ -266,38 +266,125 @@ app.post("/api/hb/chat", async (req, res) => {
 // === Seal Subscriptions proxy ===
 
 // List subscriptions for a customer email
+// === Seal Subscriptions API ===
+// Docs: https://docs.sealsubscriptions.com/merchant-api
+// All Seal actions use PUT to /subscription with { id, action } in body.
+// Listing uses GET /subscriptions?query=email&with-items=true
+
+// List subscriptions by customer email
 app.get("/api/hb/subscriptions", async (req, res) => {
   try {
     if (!SEAL_API_TOKEN) return res.status(500).json({ error: "SEAL_API_TOKEN not configured" });
     const { email } = req.query;
     if (!email) return res.status(400).json({ error: "email required" });
 
-    const sealUrl = `${SEAL_BASE}/subscriptions?customer_email=${encodeURIComponent(email)}`;
+    // Seal uses "query" param for search (email, name, etc.) and "with-items=true" for line items
+    const sealUrl = `${SEAL_BASE}/subscriptions?query=${encodeURIComponent(email)}&with-items=true`;
     console.log("[Seal] Fetching:", sealUrl);
     const r = await fetch(sealUrl, {
-      headers: { "X-Seal-Token": SEAL_API_TOKEN },
+      headers: { "X-Seal-Token": SEAL_API_TOKEN, "Content-Type": "application/json" },
     });
     const data = await r.json();
     console.log("[Seal] Status:", r.status, "| Keys:", Object.keys(data), "| Type:", Array.isArray(data) ? "array" : typeof data);
-    if (data.subscriptions) console.log("[Seal] Found", data.subscriptions.length, "subscriptions via .subscriptions");
-    else if (data.subscription_contracts) console.log("[Seal] Found", data.subscription_contracts.length, "subscriptions via .subscription_contracts");
-    else if (Array.isArray(data)) console.log("[Seal] Found", data.length, "subscriptions (raw array)");
 
-    // Normalize — Seal may wrap subscriptions under different keys
-    const subs = Array.isArray(data) ? data
-      : data.subscriptions || data.subscription_contracts || data.data || data.results || [];
-    res.status(r.status).json({ subscriptions: subs, _raw_keys: Object.keys(data) });
+    // Normalize — Seal may return array directly, or wrap in an object
+    let subs = [];
+    if (Array.isArray(data)) {
+      subs = data;
+    } else if (data.payload && Array.isArray(data.payload)) {
+      subs = data.payload;
+    } else if (data.subscriptions) {
+      subs = data.subscriptions;
+    } else if (data.data) {
+      subs = data.data;
+    }
+    console.log("[Seal] Parsed", subs.length, "subscriptions");
+    if (subs.length > 0) console.log("[Seal] First sub keys:", Object.keys(subs[0]).join(", "));
+
+    res.json({ subscriptions: subs });
   } catch (err) {
+    console.error("[Seal] Error:", err.message);
     res.status(500).json({ error: err.message });
   }
 });
 
-// Get a single subscription by id
+// Get a single subscription by id (returns full details with items + billing attempts)
 app.get("/api/hb/subscription/:id", async (req, res) => {
   try {
     if (!SEAL_API_TOKEN) return res.status(500).json({ error: "SEAL_API_TOKEN not configured" });
     const r = await fetch(`${SEAL_BASE}/subscription?id=${encodeURIComponent(req.params.id)}`, {
-      headers: { "X-Seal-Token": SEAL_API_TOKEN },
+      headers: { "X-Seal-Token": SEAL_API_TOKEN, "Content-Type": "application/json" },
+    });
+    const data = await r.json();
+    // Seal returns { success: true, payload: { ...subscription } }
+    res.json(data.payload || data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Subscription actions: pause, resume, reactivate, cancel
+// Seal uses PUT to /subscription with { id, action } in body
+app.post("/api/hb/subscription/:id/:action", async (req, res) => {
+  try {
+    if (!SEAL_API_TOKEN) return res.status(500).json({ error: "SEAL_API_TOKEN not configured" });
+    const { id, action } = req.params;
+    const validActions = ["pause", "resume", "reactivate", "cancel"];
+    if (!validActions.includes(action)) return res.status(400).json({ error: "invalid action: " + action });
+
+    console.log("[Seal] Action:", action, "on subscription:", id);
+    const r = await fetch(`${SEAL_BASE}/subscription`, {
+      method: "PUT",
+      headers: { "X-Seal-Token": SEAL_API_TOKEN, "Content-Type": "application/json" },
+      body: JSON.stringify({ id: parseInt(id), action }),
+    });
+    const data = await r.json();
+    console.log("[Seal] Action response:", r.status, data.success !== undefined ? `success=${data.success}` : "");
+    res.status(r.status).json(data);
+  } catch (err) {
+    console.error("[Seal] Action error:", err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Edit subscription (interval/frequency changes)
+// Seal uses PUT to /subscription with { id, action: "edit", edit: { ... } }
+app.post("/api/hb/subscription/:id/edit", async (req, res) => {
+  try {
+    if (!SEAL_API_TOKEN) return res.status(500).json({ error: "SEAL_API_TOKEN not configured" });
+    const { id } = req.params;
+    const editPayload = req.body;
+
+    console.log("[Seal] Edit subscription:", id, "payload:", JSON.stringify(editPayload));
+    const r = await fetch(`${SEAL_BASE}/subscription`, {
+      method: "PUT",
+      headers: { "X-Seal-Token": SEAL_API_TOKEN, "Content-Type": "application/json" },
+      body: JSON.stringify({ id: parseInt(id), action: "edit", edit: editPayload }),
+    });
+    const data = await r.json();
+    console.log("[Seal] Edit response:", r.status, data);
+    res.status(r.status).json(data);
+  } catch (err) {
+    console.error("[Seal] Edit error:", err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Skip next billing attempt
+// Seal uses PUT to /subscription-billing-attempt with { id, subscription_id, action: "skip" }
+app.post("/api/hb/subscription/:subId/skip-next", async (req, res) => {
+  try {
+    if (!SEAL_API_TOKEN) return res.status(500).json({ error: "SEAL_API_TOKEN not configured" });
+    const { subId } = req.params;
+    const { billingAttemptId } = req.body;
+
+    if (!billingAttemptId) return res.status(400).json({ error: "billingAttemptId required" });
+
+    console.log("[Seal] Skip billing attempt:", billingAttemptId, "on subscription:", subId);
+    const r = await fetch(`${SEAL_BASE}/subscription-billing-attempt`, {
+      method: "PUT",
+      headers: { "X-Seal-Token": SEAL_API_TOKEN, "Content-Type": "application/json" },
+      body: JSON.stringify({ id: parseInt(billingAttemptId), subscription_id: parseInt(subId), action: "skip" }),
     });
     const data = await r.json();
     res.status(r.status).json(data);
@@ -306,25 +393,36 @@ app.get("/api/hb/subscription/:id", async (req, res) => {
   }
 });
 
-// Subscription action: pause / resume / cancel / skip / update
-app.post("/api/hb/subscription/:id/:action", async (req, res) => {
+// Edit subscription items (remove old item + add with new quantity)
+// Seal requires separate remove_items and add_items PUT calls
+app.post("/api/hb/subscription/:id/edit-items", async (req, res) => {
   try {
     if (!SEAL_API_TOKEN) return res.status(500).json({ error: "SEAL_API_TOKEN not configured" });
-    const { id, action } = req.params;
-    const validActions = ["pause", "resume", "cancel", "skip", "update"];
-    if (!validActions.includes(action)) return res.status(400).json({ error: "invalid action" });
+    const { remove, add } = req.body;
 
-    const r = await fetch(`${SEAL_BASE}/subscription/${action}`, {
-      method: "POST",
-      headers: {
-        "X-Seal-Token": SEAL_API_TOKEN,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ id, ...req.body }),
+    console.log("[Seal] Editing items — remove:", JSON.stringify(remove), "add:", JSON.stringify(add));
+
+    // Step 1: Remove old item
+    const r1 = await fetch(`${SEAL_BASE}/subscription`, {
+      method: "PUT",
+      headers: { "X-Seal-Token": SEAL_API_TOKEN, "Content-Type": "application/json" },
+      body: JSON.stringify(remove),
     });
-    const data = await r.json();
-    res.status(r.status).json(data);
+    const d1 = await r1.json();
+    console.log("[Seal] Remove response:", r1.status, d1);
+    if (!r1.ok && r1.status !== 404) return res.status(r1.status).json(d1);
+
+    // Step 2: Add item with new quantity
+    const r2 = await fetch(`${SEAL_BASE}/subscription`, {
+      method: "PUT",
+      headers: { "X-Seal-Token": SEAL_API_TOKEN, "Content-Type": "application/json" },
+      body: JSON.stringify(add),
+    });
+    const d2 = await r2.json();
+    console.log("[Seal] Add response:", r2.status, d2);
+    res.status(r2.status).json(d2);
   } catch (err) {
+    console.error("[Seal] Edit items error:", err.message);
     res.status(500).json({ error: err.message });
   }
 });

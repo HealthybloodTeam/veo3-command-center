@@ -2828,26 +2828,46 @@ function renderSubsContent() {
   }
   return state.subs.map(sub => renderSubCard(sub)).join("");
 }
+// Parse Seal's interval string ("1 month", "2 week") into { count, unit }
+function parseInterval(str) {
+  if (!str) return { count: 1, unit: "month" };
+  const parts = str.trim().split(/\s+/);
+  return { count: parseInt(parts[0]) || 1, unit: parts[1] || "month" };
+}
+
 function renderSubCard(sub) {
-  const status = (sub.status || "active").toLowerCase();
+  // Seal statuses are UPPERCASE: ACTIVE, PAUSED, CANCELLED, EXPIRED
+  const status = (sub.status || "ACTIVE").toLowerCase();
   const isPaused = status === "paused";
-  const isCancelled = status === "cancelled" || status === "canceled";
+  const isCancelled = status === "cancelled" || status === "canceled" || status === "expired";
   const busy = state.actionBusy === sub.id;
   const showCancelFlow = state.cancelFlowId === sub.id;
-  const productName = sub.product_title || sub.line_items?.[0]?.title || "HealthyBlood Cholesterol Cleanse";
-  const interval = sub.billing_interval || sub.interval || "month";
-  const intervalCount = sub.billing_interval_count || sub.interval_count || 1;
-  const nextCharge = sub.next_billing_date || sub.next_charge_scheduled_at || null;
-  const price = sub.price ? `$${parseFloat(sub.price).toFixed(2)}` : "—";
-  const qty = sub.quantity || sub.line_items?.[0]?.quantity || 1;
-  const currentFreq = `${intervalCount}_${interval}`;
+
+  // Seal data shape: items[], delivery_interval "1 month", total_value, billing_attempts[]
+  const productName = sub.items?.[0]?.title || "HealthyBlood Cholesterol Cleanse";
+  const { count: intervalCount, unit: intervalUnit } = parseInterval(sub.delivery_interval || sub.billing_interval);
+  const qty = sub.items?.[0]?.quantity || 1;
+  const currentFreq = `${intervalCount}_${intervalUnit}`;
+
+  // Next billing: find the earliest upcoming billing attempt
+  const now = new Date();
+  const upcoming = (sub.billing_attempts || [])
+    .filter(a => !a.completed_at && !a.status && new Date(a.date) > now)
+    .sort((a, b) => new Date(a.date) - new Date(b.date));
+  const nextCharge = upcoming[0]?.date || null;
+  const nextBillingAttemptId = upcoming[0]?.id || null;
+
+  // Price: use total_value or first item's final_price
+  const price = sub.total_value ? `$${parseFloat(sub.total_value).toFixed(2)}`
+    : sub.items?.[0]?.final_price ? `$${parseFloat(sub.items[0].final_price).toFixed(2)}`
+    : "—";
 
   return `
     <div class="sub-card">
       <div class="sub-header">
         <div>
           <div class="sub-title">${esc(productName)}</div>
-          <div class="sub-meta">Every ${intervalCount} ${interval}${intervalCount > 1 ? "s" : ""}</div>
+          <div class="sub-meta">Every ${intervalCount} ${intervalUnit}${intervalCount > 1 ? "s" : ""}</div>
         </div>
         <div class="sub-status ${status}">${status}</div>
       </div>
@@ -2884,7 +2904,7 @@ function renderSubCard(sub) {
             <button class="btn small" onclick="subAction('${sub.id}','resume')">Resume</button>
             <button class="btn small danger" onclick="startCancelFlow('${sub.id}')">Cancel</button>
           ` : `
-            <button class="btn small ghost" onclick="subAction('${sub.id}','skip')">Skip Next</button>
+            <button class="btn small ghost" onclick="skipNext('${sub.id}', ${nextBillingAttemptId || 'null'})">Skip Next</button>
             <button class="btn small ghost" onclick="subAction('${sub.id}','pause')">Pause</button>
           `}
         </div>
@@ -2892,7 +2912,7 @@ function renderSubCard(sub) {
       ` : `
         <div style="text-align:center;padding:16px 0">
           <p style="color:var(--text-muted);font-size:14px;margin-bottom:12px">Miss your daily HealthyBlood routine?</p>
-          <button class="btn full" onclick="subAction('${sub.id}','resume')">Reactivate My Subscription</button>
+          <button class="btn full" onclick="subAction('${sub.id}','reactivate')">Reactivate My Subscription</button>
         </div>
       `}
     </div>
@@ -2925,34 +2945,94 @@ function confirmCancel(id) {
   state.cancelFlowId = null;
   subAction(id, "cancel");
 }
+// Seal edit: PUT /subscription { id, action: "edit", edit: { delivery_interval: "2 month", billing_interval: "2 month" } }
 function updateSubFrequency(id, val) {
   const [count, unit] = val.split("_");
-  subAction(id, "update");
-  apiPost(`/hb/subscription/${id}/update`, {
-    billing_interval: unit,
-    billing_interval_count: parseInt(count),
+  const intervalStr = `${count} ${unit}`;
+  state.actionBusy = id; state.banner = null; render();
+  apiPost(`/hb/subscription/${id}/edit`, {
+    delivery_interval: intervalStr,
+    billing_interval: intervalStr,
   }).then(() => {
     state.banner = { type: "success", msg: "Delivery frequency updated!" };
+    state.actionBusy = null;
     loadSubs();
   }).catch(e => {
     state.banner = { type: "error", msg: e.message };
+    state.actionBusy = null;
     render();
+    setTimeout(() => { state.banner = null; render(); }, 4000);
   });
 }
+// Quantity change: Seal doesn't have a direct qty edit, so we remove + re-add the item
+// For now, show a banner explaining how to adjust quantity
 function updateSubQty(id, qty) {
   if (qty < 1) return;
-  apiPost(`/hb/subscription/${id}/update`, { quantity: qty }).then(() => {
+  const sub = state.subs?.find(s => s.id === id);
+  if (!sub || !sub.items?.[0]) return;
+  state.actionBusy = id; state.banner = null; render();
+
+  const item = sub.items[0];
+  // Remove old item, then add back with new quantity
+  const removeBody = { id: parseInt(id), action: "remove_items", remove_items: [item.id] };
+  const addBody = {
+    id: parseInt(id),
+    action: "add_items",
+    add_items: [{
+      product_id: item.product_id,
+      variant_id: item.variant_id,
+      quantity: qty,
+      title: item.title,
+      sku: item.variant_sku || null,
+      price: item.original_price || item.price,
+      taxable: item.taxable || 0,
+      requires_shipping: item.requires_shipping || 1,
+      one_time: 0,
+    }],
+  };
+
+  // Sequential: remove then add
+  fetch(API + `/hb/subscription/${id}/edit-items`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ remove: removeBody, add: addBody }),
+  }).then(r => r.json()).then(data => {
+    if (data.error) throw new Error(data.error);
     state.banner = { type: "success", msg: "Quantity updated!" };
+    state.actionBusy = null;
     loadSubs();
   }).catch(e => {
     state.banner = { type: "error", msg: e.message };
+    state.actionBusy = null;
     render();
+    setTimeout(() => { state.banner = null; render(); }, 4000);
+  });
+}
+// Skip uses the billing attempt endpoint
+function skipNext(subId, billingAttemptId) {
+  if (!billingAttemptId) {
+    state.banner = { type: "error", msg: "No upcoming delivery to skip." };
+    render();
+    setTimeout(() => { state.banner = null; render(); }, 3000);
+    return;
+  }
+  state.actionBusy = subId; state.banner = null; render();
+  apiPost(`/hb/subscription/${subId}/skip-next`, { billingAttemptId }).then(() => {
+    state.banner = { type: "success", msg: "Next delivery skipped!" };
+    state.actionBusy = null;
+    loadSubs();
+  }).catch(e => {
+    state.banner = { type: "error", msg: e.message };
+    state.actionBusy = null;
+    render();
+    setTimeout(() => { state.banner = null; render(); }, 4000);
   });
 }
 window.startCancelFlow = startCancelFlow;
 window.confirmCancel = confirmCancel;
 window.updateSubFrequency = updateSubFrequency;
 window.updateSubQty = updateSubQty;
+window.skipNext = skipNext;
 function formatDate(d) {
   try {
     return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
@@ -2974,9 +3054,15 @@ async function loadSubs() {
 }
 async function subAction(id, action) {
   state.actionBusy = id; state.banner = null; render();
+  const msgs = {
+    pause: "Subscription paused. You can resume anytime.",
+    resume: "Welcome back! Subscription resumed.",
+    reactivate: "Great to have you back! Subscription reactivated.",
+    cancel: "Subscription cancelled. We'll miss you!",
+  };
   try {
     await apiPost(`/hb/subscription/${id}/${action}`, {});
-    state.banner = { type: "success", msg: `Subscription ${action}d successfully.` };
+    state.banner = { type: "success", msg: msgs[action] || "Done!" };
     await loadSubs();
   } catch (e) {
     state.banner = { type: "error", msg: e.message };
