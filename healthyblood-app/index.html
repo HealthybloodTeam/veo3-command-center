@@ -3140,13 +3140,24 @@ function updateSubQty(id, qty) {
   state.actionBusy = id; state.banner = null; render();
 
   const item = sub.items[0];
-  console.log("[SubQty] Item:", item.id, "new qty:", qty);
+  console.log("[SubQty] Full item:", JSON.stringify(item), "new qty:", qty);
 
-  // Use set_item_quantity — just needs item ID and new quantity, no SKU hassle
+  // Seal has no direct qty edit — must remove old item then add with new qty
+  // Send full item details so server can do add-first-then-remove
   fetch(API + `/hb/subscription/${id}/edit-items`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ itemId: item.id, quantity: qty }),
+    body: JSON.stringify({
+      itemId: item.id,
+      quantity: qty,
+      product_id: item.product_id,
+      variant_id: item.variant_id,
+      title: item.title,
+      sku: item.sku || item.variant_sku || "",
+      price: item.original_price || item.price,
+      taxable: item.taxable ?? 1,
+      requires_shipping: item.requires_shipping ?? 1,
+    }),
   }).then(r => r.json()).then(data => {
     if (data.error) throw new Error(data.error);
     state.banner = { type: "success", msg: "Quantity updated!" };

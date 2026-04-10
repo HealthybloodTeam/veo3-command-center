@@ -396,28 +396,66 @@ app.post("/api/hb/subscription/:subId/skip-next", async (req, res) => {
   }
 });
 
-// Edit subscription item quantity using set_item_quantity action
-// Much simpler than remove+add — just needs item ID and new quantity, no SKU required
+// Edit subscription item quantity: add new item first, then remove old
+// Seal has no direct qty edit — must do add_items + remove_items
+// Adding first ensures the subscription always has at least one item
 app.post("/api/hb/subscription/:id/edit-items", async (req, res) => {
   try {
     if (!SEAL_API_TOKEN) return res.status(500).json({ error: "SEAL_API_TOKEN not configured" });
-    const { itemId, quantity } = req.body;
+    const { itemId, quantity, product_id, variant_id, title, sku, price, taxable, requires_shipping } = req.body;
     const subId = parseInt(req.params.id);
 
-    console.log("[Seal] set_item_quantity — sub:", subId, "item:", itemId, "qty:", quantity);
+    // Build the add_items payload — omit sku entirely if empty (Seal rejects empty string)
+    const newItem = {
+      product_id: String(product_id),
+      variant_id: String(variant_id),
+      quantity: String(quantity),
+      title: title || "HealthyBlood Cholesterol Cleanse",
+      price: parseFloat(price) || 0,
+      taxable: taxable || 1,
+      requires_shipping: requires_shipping || 1,
+    };
+    // Only include sku if it has a real value
+    if (sku && sku.trim()) newItem.sku = sku.trim();
 
-    const r = await fetch(`${SEAL_BASE}/subscription`, {
+    console.log("[Seal] Qty change — sub:", subId, "old item:", itemId, "new qty:", quantity);
+    console.log("[Seal] add_items payload:", JSON.stringify(newItem));
+
+    // Step 1: Add item with new quantity
+    const r1 = await fetch(`${SEAL_BASE}/subscription`, {
       method: "PUT",
       headers: { "X-Seal-Token": SEAL_API_TOKEN, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        id: subId,
-        action: "set_item_quantity",
-        set_item_quantity: { id: itemId, quantity },
-      }),
+      body: JSON.stringify({ id: subId, action: "add_items", add_items: [newItem] }),
     });
-    const data = await r.json();
-    console.log("[Seal] set_item_quantity response:", r.status, JSON.stringify(data));
-    res.status(r.status).json(data);
+    const d1 = await r1.json();
+    console.log("[Seal] add_items response:", r1.status, JSON.stringify(d1));
+    if (!d1.success && !r1.ok) {
+      // If add fails because of missing sku, try again with variant_id as sku
+      if (JSON.stringify(d1).toLowerCase().includes("sku")) {
+        console.log("[Seal] Retrying add_items with variant_id as sku fallback");
+        newItem.sku = String(variant_id);
+        const r1b = await fetch(`${SEAL_BASE}/subscription`, {
+          method: "PUT",
+          headers: { "X-Seal-Token": SEAL_API_TOKEN, "Content-Type": "application/json" },
+          body: JSON.stringify({ id: subId, action: "add_items", add_items: [newItem] }),
+        });
+        const d1b = await r1b.json();
+        console.log("[Seal] add_items retry response:", r1b.status, JSON.stringify(d1b));
+        if (!d1b.success && !r1b.ok) return res.status(r1b.status).json(d1b);
+      } else {
+        return res.status(r1.status).json(d1);
+      }
+    }
+
+    // Step 2: Remove old item (now safe — subscription has 2 items)
+    const r2 = await fetch(`${SEAL_BASE}/subscription`, {
+      method: "PUT",
+      headers: { "X-Seal-Token": SEAL_API_TOKEN, "Content-Type": "application/json" },
+      body: JSON.stringify({ id: subId, action: "remove_items", remove_items: [itemId] }),
+    });
+    const d2 = await r2.json();
+    console.log("[Seal] remove_items response:", r2.status, JSON.stringify(d2));
+    res.status(r2.status).json(d2);
   } catch (err) {
     console.error("[Seal] Edit items error:", err.message);
     res.status(500).json({ error: err.message });
