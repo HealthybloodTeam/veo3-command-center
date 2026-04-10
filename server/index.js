@@ -272,11 +272,21 @@ app.get("/api/hb/subscriptions", async (req, res) => {
     const { email } = req.query;
     if (!email) return res.status(400).json({ error: "email required" });
 
-    const r = await fetch(`${SEAL_BASE}/subscriptions?customer_email=${encodeURIComponent(email)}`, {
+    const sealUrl = `${SEAL_BASE}/subscriptions?customer_email=${encodeURIComponent(email)}`;
+    console.log("[Seal] Fetching:", sealUrl);
+    const r = await fetch(sealUrl, {
       headers: { "X-Seal-Token": SEAL_API_TOKEN },
     });
     const data = await r.json();
-    res.status(r.status).json(data);
+    console.log("[Seal] Status:", r.status, "| Keys:", Object.keys(data), "| Type:", Array.isArray(data) ? "array" : typeof data);
+    if (data.subscriptions) console.log("[Seal] Found", data.subscriptions.length, "subscriptions via .subscriptions");
+    else if (data.subscription_contracts) console.log("[Seal] Found", data.subscription_contracts.length, "subscriptions via .subscription_contracts");
+    else if (Array.isArray(data)) console.log("[Seal] Found", data.length, "subscriptions (raw array)");
+
+    // Normalize — Seal may wrap subscriptions under different keys
+    const subs = Array.isArray(data) ? data
+      : data.subscriptions || data.subscription_contracts || data.data || data.results || [];
+    res.status(r.status).json({ subscriptions: subs, _raw_keys: Object.keys(data) });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

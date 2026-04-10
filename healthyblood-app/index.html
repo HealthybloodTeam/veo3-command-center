@@ -1458,6 +1458,119 @@
     gap: 10px;
     margin-top: 16px;
   }
+  /* Frequency / quantity adjustment row */
+  .sub-adjust {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 0;
+    border-top: 1px solid var(--border-soft);
+  }
+  .sub-adjust .key { color: var(--text-muted); font-weight: 500; font-size: 14px; }
+  .sub-adjust select, .sub-adjust .qty-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .sub-adjust select {
+    background: var(--bg);
+    border: 1.5px solid var(--border-soft);
+    border-radius: 10px;
+    padding: 6px 10px;
+    color: var(--text);
+    font-size: 13px;
+    font-family: inherit;
+    cursor: pointer;
+    color-scheme: dark;
+  }
+  .qty-btn {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: var(--bg);
+    border: 1.5px solid var(--border-soft);
+    color: var(--text);
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+  }
+  .qty-btn:active { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+  .qty-val {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text);
+    min-width: 20px;
+    text-align: center;
+  }
+  /* Retention / cancel flow overlay */
+  .cancel-flow {
+    background: linear-gradient(180deg, var(--bg-card), #1a0a0a);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    border-radius: 20px;
+    padding: 24px;
+    margin-top: 12px;
+    text-align: center;
+  }
+  .cancel-flow h3 {
+    font-family: "Fraunces", serif;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 8px;
+  }
+  .cancel-flow p {
+    font-size: 14px;
+    color: var(--text-muted);
+    line-height: 1.5;
+    margin-bottom: 16px;
+  }
+  .cancel-flow .save-offer {
+    background: linear-gradient(135deg, rgba(74, 222, 128, 0.12), rgba(74, 222, 128, 0.04));
+    border: 1px solid rgba(74, 222, 128, 0.3);
+    border-radius: 14px;
+    padding: 16px;
+    margin-bottom: 16px;
+    text-align: center;
+  }
+  .cancel-flow .save-offer strong {
+    color: var(--accent);
+    font-size: 16px;
+  }
+  .cancel-flow .save-offer p {
+    font-size: 13px;
+    margin: 6px 0 0;
+  }
+  .cancel-flow .cancel-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  /* Cora gated state */
+  .cora-gated {
+    text-align: center;
+    padding: 60px 24px;
+  }
+  .cora-gated .lock-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+  }
+  .cora-gated h3 {
+    font-family: "Fraunces", serif;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 10px;
+  }
+  .cora-gated p {
+    font-size: 14px;
+    color: var(--text-muted);
+    line-height: 1.6;
+    margin-bottom: 20px;
+  }
 
   /* === Profile === */
   .profile-card {
@@ -1720,6 +1833,7 @@ const state = {
   subsLoading: false,
   subsError: null,
   actionBusy: null,
+  cancelFlowId: null,
   banner: null,
   // Health: lab results [{date:"2026-04-09", ldl:120, hdl:55, total:200, trig:140}, ...]
   labs: JSON.parse(localStorage.getItem("hb_labs") || "[]"),
@@ -2592,7 +2706,35 @@ function getGreeting() {
 function capitalize(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : ""; }
 
 // === Cora Chat ===
+function hasActiveSub() {
+  if (!state.subs || state.subs.length === 0) return false;
+  return state.subs.some(s => {
+    const st = (s.status || "").toLowerCase();
+    return st === "active" || st === "paused";
+  });
+}
+
 function viewChat() {
+  // Gate Cora behind an active subscription
+  if (state.subs !== null && !hasActiveSub()) {
+    return `
+      <div class="cora-header">
+        <div class="cora-avatar">C</div>
+        <div class="cora-info">
+          <div class="cora-name">Cora</div>
+          <div class="cora-status"><span class="dot"></span>Your wellness coach</div>
+        </div>
+      </div>
+      <div class="cora-gated">
+        <div class="lock-icon">🌿</div>
+        <h3>Cora is waiting for you</h3>
+        <p>Your personal wellness coach is included with every HealthyBlood subscription. Get coaching, heart-healthy recipes, lab tracking, and daily habit support.</p>
+        <a class="btn full" href="https://www.tryhealthyblood.com" target="_blank" style="max-width:300px;margin:0 auto;display:block;text-align:center">Subscribe to HealthyBlood</a>
+        <p style="font-size:12px;color:var(--text-muted);margin-top:12px">Already subscribed? Make sure you signed in with the same email you used to order.</p>
+      </div>
+    `;
+  }
+
   const empty = state.chat.length === 0;
   return `
     <div class="cora-header">
@@ -2691,11 +2833,14 @@ function renderSubCard(sub) {
   const isPaused = status === "paused";
   const isCancelled = status === "cancelled" || status === "canceled";
   const busy = state.actionBusy === sub.id;
+  const showCancelFlow = state.cancelFlowId === sub.id;
   const productName = sub.product_title || sub.line_items?.[0]?.title || "HealthyBlood Cholesterol Cleanse";
   const interval = sub.billing_interval || sub.interval || "month";
   const intervalCount = sub.billing_interval_count || sub.interval_count || 1;
   const nextCharge = sub.next_billing_date || sub.next_charge_scheduled_at || null;
   const price = sub.price ? `$${parseFloat(sub.price).toFixed(2)}` : "—";
+  const qty = sub.quantity || sub.line_items?.[0]?.quantity || 1;
+  const currentFreq = `${intervalCount}_${interval}`;
 
   return `
     <div class="sub-card">
@@ -2715,21 +2860,99 @@ function renderSubCard(sub) {
         <span class="val">${price}</span>
       </div>
       ${!isCancelled ? `
+        <div class="sub-adjust">
+          <span class="key">Delivery every</span>
+          <select onchange="updateSubFrequency('${sub.id}', this.value)">
+            <option value="1_month" ${currentFreq === "1_month" ? "selected" : ""}>1 month</option>
+            <option value="2_month" ${currentFreq === "2_month" ? "selected" : ""}>2 months</option>
+            <option value="3_month" ${currentFreq === "3_month" ? "selected" : ""}>3 months</option>
+            <option value="6_month" ${currentFreq === "6_month" ? "selected" : ""}>6 months</option>
+          </select>
+        </div>
+        <div class="sub-adjust">
+          <span class="key">Quantity</span>
+          <div class="qty-controls">
+            <button class="qty-btn" onclick="updateSubQty('${sub.id}', ${qty - 1})">−</button>
+            <span class="qty-val">${qty}</span>
+            <button class="qty-btn" onclick="updateSubQty('${sub.id}', ${qty + 1})">+</button>
+          </div>
+        </div>
         <div class="sub-actions">
           ${busy ? `
             <div style="grid-column:1/-1;text-align:center;padding:14px"><span class="spinner"></span></div>
           ` : isPaused ? `
-            <button class="btn small" onclick="subAction('${sub.id}','resume')">▶ Resume</button>
-            <button class="btn small danger" onclick="subAction('${sub.id}','cancel')">Cancel</button>
+            <button class="btn small" onclick="subAction('${sub.id}','resume')">Resume</button>
+            <button class="btn small danger" onclick="startCancelFlow('${sub.id}')">Cancel</button>
           ` : `
             <button class="btn small ghost" onclick="subAction('${sub.id}','skip')">Skip Next</button>
             <button class="btn small ghost" onclick="subAction('${sub.id}','pause')">Pause</button>
           `}
         </div>
-      ` : ""}
+        ${showCancelFlow ? renderCancelFlow(sub.id) : ""}
+      ` : `
+        <div style="text-align:center;padding:16px 0">
+          <p style="color:var(--text-muted);font-size:14px;margin-bottom:12px">Miss your daily HealthyBlood routine?</p>
+          <button class="btn full" onclick="subAction('${sub.id}','resume')">Reactivate My Subscription</button>
+        </div>
+      `}
     </div>
   `;
 }
+
+function renderCancelFlow(subId) {
+  return `
+    <div class="cancel-flow">
+      <h3>Before you go...</h3>
+      <p>Consistency is everything with HealthyBlood. Most customers start seeing real changes in their cholesterol after 4 to 8 weeks of daily use.</p>
+      <div class="save-offer">
+        <strong>Would pausing work better?</strong>
+        <p>You can pause your deliveries and restart anytime. Your progress with Cora, your habits, and your lab history will all be saved.</p>
+      </div>
+      <div class="cancel-actions">
+        <button class="btn full" onclick="subAction('${subId}','pause'); state.cancelFlowId=null;">Pause Instead</button>
+        <button class="btn full ghost" onclick="state.cancelFlowId=null; render();">Never mind, keep my subscription</button>
+        <button class="btn full danger" style="margin-top:8px;opacity:0.7;font-size:13px" onclick="confirmCancel('${subId}')">I still want to cancel</button>
+      </div>
+    </div>
+  `;
+}
+
+function startCancelFlow(id) {
+  state.cancelFlowId = id;
+  render();
+}
+function confirmCancel(id) {
+  state.cancelFlowId = null;
+  subAction(id, "cancel");
+}
+function updateSubFrequency(id, val) {
+  const [count, unit] = val.split("_");
+  subAction(id, "update");
+  apiPost(`/hb/subscription/${id}/update`, {
+    billing_interval: unit,
+    billing_interval_count: parseInt(count),
+  }).then(() => {
+    state.banner = { type: "success", msg: "Delivery frequency updated!" };
+    loadSubs();
+  }).catch(e => {
+    state.banner = { type: "error", msg: e.message };
+    render();
+  });
+}
+function updateSubQty(id, qty) {
+  if (qty < 1) return;
+  apiPost(`/hb/subscription/${id}/update`, { quantity: qty }).then(() => {
+    state.banner = { type: "success", msg: "Quantity updated!" };
+    loadSubs();
+  }).catch(e => {
+    state.banner = { type: "error", msg: e.message };
+    render();
+  });
+}
+window.startCancelFlow = startCancelFlow;
+window.confirmCancel = confirmCancel;
+window.updateSubFrequency = updateSubFrequency;
+window.updateSubQty = updateSubQty;
 function formatDate(d) {
   try {
     return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
@@ -2739,8 +2962,11 @@ async function loadSubs() {
   state.subsLoading = true; state.subsError = null; render();
   try {
     const data = await apiGet(`/hb/subscriptions?email=${encodeURIComponent(state.email)}`);
+    console.log("[Subs] API response keys:", Object.keys(data), "raw_keys:", data._raw_keys);
     state.subs = Array.isArray(data) ? data : (data.subscriptions || data.data || []);
+    console.log("[Subs] Parsed", state.subs.length, "subscriptions", state.subs.length > 0 ? "first keys:" : "", state.subs[0] ? Object.keys(state.subs[0]) : []);
   } catch (e) {
+    console.error("[Subs] Error:", e.message);
     state.subsError = e.message;
     state.subs = null;
   }
@@ -3024,6 +3250,10 @@ function escMulti(s) {
 // === Boot ===
 render();
 scheduleReminders();
+// Load subscriptions in background on boot (needed for Cora gating)
+if (state.email && state.onboarded && !state.subs && !state.subsLoading) {
+  loadSubs();
+}
 </script>
 </body>
 </html>
