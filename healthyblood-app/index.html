@@ -1541,6 +1541,55 @@
     min-width: 20px;
     text-align: center;
   }
+  /* Order history cards */
+  .order-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-soft);
+    border-radius: 14px;
+    padding: 16px;
+    margin-bottom: 10px;
+  }
+  .order-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+  .order-number {
+    font-family: var(--serif);
+    font-weight: 700;
+    font-size: 15px;
+    color: var(--text);
+  }
+  .order-date {
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+  .order-items {
+    font-size: 13px;
+    color: var(--text-muted);
+    line-height: 1.4;
+    margin-bottom: 10px;
+  }
+  .order-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 10px;
+    border-top: 1px solid var(--border-soft);
+  }
+  .order-total {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .order-status {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
   /* Retention / cancel flow overlay */
   .cancel-flow {
     background: linear-gradient(180deg, var(--bg-card), #1a0a0a);
@@ -1872,6 +1921,9 @@ const state = {
   pauseFlowId: null,
   skipFlowId: null,
   banner: null,
+  orders: null,
+  ordersLoading: false,
+  ordersError: null,
   // Health: lab results [{date:"2026-04-09", ldl:120, hdl:55, total:200, trig:140}, ...]
   labs: JSON.parse(localStorage.getItem("hb_labs") || "[]"),
   healthSubtab: "labs", // "labs" | "recipes"
@@ -2890,6 +2942,10 @@ function viewSubs() {
       ${state.banner ? `<div class="${state.banner.type}-banner">${esc(state.banner.msg)}</div>` : ""}
       ${renderSubsContent()}
     </div>
+    <div class="section" style="margin-top:8px;">
+      <h3 style="font-family:var(--serif);font-size:18px;margin-bottom:12px;">Order History</h3>
+      ${renderOrderHistory()}
+    </div>
   `;
 }
 function renderSubsContent() {
@@ -2912,6 +2968,49 @@ function renderSubsContent() {
   }
   return state.subs.map(sub => renderSubCard(sub)).join("");
 }
+function renderOrderHistory() {
+  if (state.ordersLoading) {
+    return `<div class="loading-state"><div class="spinner"></div><div>Loading order history…</div></div>`;
+  }
+  if (state.ordersError) {
+    return `<div class="error-banner">${esc(state.ordersError)}</div>
+      <button class="btn full ghost" onclick="loadOrders()">Try Again</button>`;
+  }
+  if (!state.orders || state.orders.length === 0) {
+    return `<p style="color:var(--text-muted);font-size:14px;">No past orders found for this account.</p>`;
+  }
+  return state.orders.map(order => {
+    const date = formatDate(order.created_at);
+    const total = order.total_price ? `$${parseFloat(order.total_price).toFixed(2)}` : "";
+    const fulfillment = order.fulfillment_status || "unfulfilled";
+    const financial = order.financial_status || "pending";
+
+    // Fulfillment badge color
+    const fulfillColors = { fulfilled: "#10b981", partial: "#f59e0b", unfulfilled: "#6b7280" };
+    const fulfillColor = fulfillColors[fulfillment] || "#6b7280";
+    const fulfillLabel = fulfillment === "fulfilled" ? "Delivered" : fulfillment === "partial" ? "Partially shipped" : "Processing";
+
+    // Line items summary
+    const items = (order.line_items || []).map(li =>
+      `${li.title}${li.variant_title ? " (" + esc(li.variant_title) + ")" : ""}${li.quantity > 1 ? " × " + li.quantity : ""}`
+    ).join(", ");
+
+    return `
+      <div class="order-card">
+        <div class="order-header">
+          <span class="order-number">${esc(order.name || "#" + order.order_number)}</span>
+          <span class="order-date">${date}</span>
+        </div>
+        <div class="order-items">${esc(items)}</div>
+        <div class="order-footer">
+          <span class="order-total">${total} ${esc(order.currency || "USD")}</span>
+          <span class="order-status" style="color:${fulfillColor}">${fulfillLabel}</span>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
 // Parse Seal's interval string ("1 month", "2 week") into { count, unit }
 function parseInterval(str) {
   if (!str) return { count: 1, unit: "month" };
@@ -3246,6 +3345,19 @@ async function loadSubs() {
   }
   state.subsLoading = false; render();
 }
+async function loadOrders() {
+  state.ordersLoading = true; state.ordersError = null; render();
+  try {
+    const data = await apiGet(`/hb/orders?email=${encodeURIComponent(state.email)}`);
+    state.orders = Array.isArray(data) ? data : [];
+    console.log("[Orders] Loaded", state.orders.length, "orders");
+  } catch (e) {
+    console.error("[Orders] Error:", e.message);
+    state.ordersError = e.message;
+    state.orders = null;
+  }
+  state.ordersLoading = false; render();
+}
 async function subAction(id, action) {
   state.actionBusy = id; state.banner = null; render();
   const msgs = {
@@ -3437,6 +3549,7 @@ function bindEvents() {
       state.tab = tab;
       render();
       if (tab === "subs" && !state.subs && !state.subsLoading) loadSubs();
+      if (tab === "subs" && !state.orders && !state.ordersLoading) loadOrders();
     });
   });
 
@@ -3477,9 +3590,12 @@ function bindEvents() {
     });
   });
 
-  // Auto-load subs when entering tab
+  // Auto-load subs + orders when entering tab
   if (state.tab === "subs" && !state.subs && !state.subsLoading && !state.subsError) {
     loadSubs();
+  }
+  if (state.tab === "subs" && !state.orders && !state.ordersLoading && !state.ordersError) {
+    loadOrders();
   }
 
   // Health sub-tabs
