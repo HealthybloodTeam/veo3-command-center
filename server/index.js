@@ -405,18 +405,20 @@ app.post("/api/hb/subscription/:id/edit-items", async (req, res) => {
     const { itemId, quantity, product_id, variant_id, title, sku, price, taxable, requires_shipping } = req.body;
     const subId = parseInt(req.params.id);
 
-    // Build the add_items payload — omit sku entirely if empty (Seal rejects empty string)
+    // Build add_items payload with ALL required fields
+    // SKU: use actual sku, fallback to variant_id (Seal requires non-empty sku)
+    // one_time: required by Seal, 0 = recurring subscription item
     const newItem = {
       product_id: String(product_id),
       variant_id: String(variant_id),
       quantity: String(quantity),
       title: title || "HealthyBlood Cholesterol Cleanse",
+      sku: (sku && sku.trim()) ? sku.trim() : String(variant_id),
       price: parseFloat(price) || 0,
       taxable: taxable || 1,
       requires_shipping: requires_shipping || 1,
+      one_time: 0,
     };
-    // Only include sku if it has a real value
-    if (sku && sku.trim()) newItem.sku = sku.trim();
 
     console.log("[Seal] Qty change — sub:", subId, "old item:", itemId, "new qty:", quantity);
     console.log("[Seal] add_items payload:", JSON.stringify(newItem));
@@ -429,23 +431,7 @@ app.post("/api/hb/subscription/:id/edit-items", async (req, res) => {
     });
     const d1 = await r1.json();
     console.log("[Seal] add_items response:", r1.status, JSON.stringify(d1));
-    if (!d1.success && !r1.ok) {
-      // If add fails because of missing sku, try again with variant_id as sku
-      if (JSON.stringify(d1).toLowerCase().includes("sku")) {
-        console.log("[Seal] Retrying add_items with variant_id as sku fallback");
-        newItem.sku = String(variant_id);
-        const r1b = await fetch(`${SEAL_BASE}/subscription`, {
-          method: "PUT",
-          headers: { "X-Seal-Token": SEAL_API_TOKEN, "Content-Type": "application/json" },
-          body: JSON.stringify({ id: subId, action: "add_items", add_items: [newItem] }),
-        });
-        const d1b = await r1b.json();
-        console.log("[Seal] add_items retry response:", r1b.status, JSON.stringify(d1b));
-        if (!d1b.success && !r1b.ok) return res.status(r1b.status).json(d1b);
-      } else {
-        return res.status(r1.status).json(d1);
-      }
-    }
+    if (!d1.success && !r1.ok) return res.status(r1.status).json(d1);
 
     // Step 2: Remove old item (now safe — subscription has 2 items)
     const r2 = await fetch(`${SEAL_BASE}/subscription`, {
