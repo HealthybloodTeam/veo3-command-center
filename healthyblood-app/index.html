@@ -2936,15 +2936,38 @@ function renderSubCard(sub) {
   // Next billing: find the earliest upcoming billing attempt
   const now = new Date();
   const skipStatuses = ["completed", "skipped", "failed", "cancelled", "canceled", "refunded"];
-  const upcoming = (sub.billing_attempts || [])
-    .filter(a => {
-      const st = (a.status || "").toLowerCase();
-      return !skipStatuses.includes(st) && new Date(a.date || a.billing_date || a.scheduled_at) > now;
-    })
-    .sort((a, b) => new Date(a.date || a.billing_date) - new Date(b.date || b.billing_date));
-  // Fallback: Seal often puts next date directly on the subscription object
-  const nextCharge = upcoming[0]?.date || upcoming[0]?.billing_date || sub.next_billing_date || sub.next_charge_scheduled_at || null;
+  const allAttempts = (sub.billing_attempts || []).map(a => ({
+    ...a,
+    _date: new Date(a.date || a.billing_date || a.scheduled_at || 0),
+    _status: (a.status || "").toLowerCase(),
+  }));
+  const upcoming = allAttempts
+    .filter(a => !skipStatuses.includes(a._status) && a._date > now)
+    .sort((a, b) => a._date - b._date);
+  // Most recent completed attempt — used to compute next date if no upcoming found
+  const lastCompleted = allAttempts
+    .filter(a => a._status === "completed" || a.completed_at)
+    .sort((a, b) => b._date - a._date)[0];
+
+  let nextCharge = upcoming[0]?.date || upcoming[0]?.billing_date || sub.next_billing_date || sub.next_charge_scheduled_at || null;
   const nextBillingAttemptId = upcoming[0]?.id || null;
+
+  // Fallback: compute next delivery from last completed + current interval
+  if (!nextCharge && !isCancelled) {
+    const baseDate = lastCompleted?._date || new Date(sub.order_placed || now);
+    const next = new Date(baseDate);
+    if (intervalUnit === "month") next.setMonth(next.getMonth() + intervalCount);
+    else if (intervalUnit === "week") next.setDate(next.getDate() + intervalCount * 7);
+    else if (intervalUnit === "day") next.setDate(next.getDate() + intervalCount);
+    // Only use computed date if it's in the future; otherwise step forward again
+    while (next <= now) {
+      if (intervalUnit === "month") next.setMonth(next.getMonth() + intervalCount);
+      else if (intervalUnit === "week") next.setDate(next.getDate() + intervalCount * 7);
+      else next.setDate(next.getDate() + intervalCount);
+    }
+    nextCharge = next.toISOString();
+  }
+  console.log("[SubCard]", sub.id, "attempts:", allAttempts.length, "upcoming:", upcoming.length, "nextCharge:", nextCharge, "interval:", intervalCount, intervalUnit);
 
   // Price: use total_value or first item's final_price
   const price = sub.total_value ? `$${parseFloat(sub.total_value).toFixed(2)}`
