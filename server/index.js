@@ -278,8 +278,8 @@ app.get("/api/hb/subscriptions", async (req, res) => {
     const { email } = req.query;
     if (!email) return res.status(400).json({ error: "email required" });
 
-    // Seal uses "query" param for search (email, name, etc.) and "with-items=true" for line items
-    const sealUrl = `${SEAL_BASE}/subscriptions?query=${encodeURIComponent(email)}&with-items=true`;
+    // Seal uses "query" param for search, "with-items=true" for line items, "with-billing-attempts=true" for next delivery dates
+    const sealUrl = `${SEAL_BASE}/subscriptions?query=${encodeURIComponent(email)}&with-items=true&with-billing-attempts=true`;
     console.log("[Seal] Fetching:", sealUrl);
     const r = await fetch(sealUrl, {
       headers: { "X-Seal-Token": SEAL_API_TOKEN, "Content-Type": "application/json" },

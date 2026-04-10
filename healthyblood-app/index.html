@@ -730,6 +730,41 @@
     color: var(--text-soft);
     line-height: 1.5;
   }
+  /* Locked recipe cards */
+  .recipe-card.locked {
+    opacity: 0.45;
+    pointer-events: none;
+    filter: grayscale(0.3);
+  }
+  .recipe-card.locked .recipe-summary { display: none; }
+  .lock-badge {
+    font-size: 16px;
+    flex-shrink: 0;
+    margin-left: 8px;
+  }
+  /* Recipe gate CTA */
+  .recipe-gate {
+    text-align: center;
+    padding: 24px 16px;
+    margin: 12px 0;
+    background: linear-gradient(135deg, rgba(74, 222, 128, 0.08), rgba(74, 222, 128, 0.02));
+    border: 1px solid rgba(74, 222, 128, 0.2);
+    border-radius: 18px;
+  }
+  .recipe-gate-icon { font-size: 32px; margin-bottom: 8px; }
+  .recipe-gate-count {
+    font-family: "Fraunces", serif;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--accent);
+    margin-bottom: 8px;
+  }
+  .recipe-gate p {
+    font-size: 13px;
+    color: var(--text-muted);
+    line-height: 1.5;
+    margin-bottom: 14px;
+  }
   .recipe-detail {
     background: var(--bg-card);
     border: 1px solid var(--border-soft);
@@ -1834,6 +1869,7 @@ const state = {
   subsError: null,
   actionBusy: null,
   cancelFlowId: null,
+  pauseFlowId: null,
   banner: null,
   // Health: lab results [{date:"2026-04-09", ldl:120, hdl:55, total:200, trig:140}, ...]
   labs: JSON.parse(localStorage.getItem("hb_labs") || "[]"),
@@ -2328,14 +2364,20 @@ const RECIPE_CATEGORIES = [
 function viewRecipes() {
   const cat = state.recipeCategory;
   const filtered = cat === "all" ? RECIPES : RECIPES.filter(r => r.cat === cat);
+  const subscribed = hasActiveSub();
+  const FREE_LIMIT = 5;
+  const freeRecipes = filtered.slice(0, FREE_LIMIT);
+  const lockedRecipes = filtered.slice(FREE_LIMIT);
+  const showLocked = !subscribed && lockedRecipes.length > 0;
+
   return `
     <div class="recipe-categories">
       ${RECIPE_CATEGORIES.map(c => `
         <button class="recipe-cat-pill ${cat === c.id ? "active" : ""}" data-cat="${c.id}">${esc(c.label)}</button>
       `).join("")}
     </div>
-    <div class="recipe-cat-count">${filtered.length} recipe${filtered.length === 1 ? "" : "s"}</div>
-    ${filtered.map(r => `
+    <div class="recipe-cat-count">${filtered.length} recipe${filtered.length === 1 ? "" : "s"}${!subscribed ? ` · ${FREE_LIMIT} free` : ""}</div>
+    ${freeRecipes.map(r => `
       <div class="recipe-card" onclick="openRecipe('${r.id}')">
         <div class="recipe-header">
           <div class="recipe-emoji">${r.emoji}</div>
@@ -2347,12 +2389,53 @@ function viewRecipes() {
         <div class="recipe-summary">${esc(r.summary)}</div>
       </div>
     `).join("")}
+    ${showLocked ? `
+      <div class="recipe-gate">
+        <div class="recipe-gate-icon">🔒</div>
+        <div class="recipe-gate-count">+${lockedRecipes.length} more recipe${lockedRecipes.length === 1 ? "" : "s"}</div>
+        <p>Subscribe to HealthyBlood to unlock all ${filtered.length} heart-healthy recipes, plus Cora, your personal wellness coach.</p>
+        <a class="btn full" href="https://www.tryhealthyblood.com" target="_blank" style="max-width:280px;margin:0 auto;display:block;text-align:center">Unlock All Recipes</a>
+      </div>
+      ${lockedRecipes.map(r => `
+        <div class="recipe-card locked">
+          <div class="recipe-header">
+            <div class="recipe-emoji">${r.emoji}</div>
+            <div style="flex:1;min-width:0">
+              <div class="recipe-title">${esc(r.title)}</div>
+              <div class="recipe-meta">${esc(r.time)} · ${esc(r.calories)}</div>
+            </div>
+            <div class="lock-badge">🔒</div>
+          </div>
+        </div>
+      `).join("")}
+    ` : subscribed ? filtered.slice(FREE_LIMIT).map(r => `
+      <div class="recipe-card" onclick="openRecipe('${r.id}')">
+        <div class="recipe-header">
+          <div class="recipe-emoji">${r.emoji}</div>
+          <div style="flex:1;min-width:0">
+            <div class="recipe-title">${esc(r.title)}</div>
+            <div class="recipe-meta">${esc(r.time)} · ${esc(r.calories)}</div>
+          </div>
+        </div>
+        <div class="recipe-summary">${esc(r.summary)}</div>
+      </div>
+    `).join("") : ""}
   `;
 }
 
 function viewRecipeDetail() {
   const r = RECIPES.find(x => x.id === state.selectedRecipe);
   if (!r) return viewRecipes();
+  // Check if this recipe is locked (beyond free limit for non-subscribers)
+  if (!hasActiveSub()) {
+    const cat = r.cat;
+    const catRecipes = cat ? RECIPES.filter(x => x.cat === cat) : RECIPES;
+    const freeIds = catRecipes.slice(0, 5).map(x => x.id);
+    if (!freeIds.includes(r.id)) {
+      state.selectedRecipe = null;
+      return viewRecipes();
+    }
+  }
   return `
     <div class="recipe-detail">
       <button class="recipe-back" onclick="closeRecipe()">‹ Back to recipes</button>
@@ -2710,7 +2793,7 @@ function hasActiveSub() {
   if (!state.subs || state.subs.length === 0) return false;
   return state.subs.some(s => {
     const st = (s.status || "").toLowerCase();
-    return st === "active" || st === "paused";
+    return st === "active";
   });
 }
 
@@ -2886,6 +2969,7 @@ function renderSubCard(sub) {
             <option value="1_month" ${currentFreq === "1_month" ? "selected" : ""}>1 month</option>
             <option value="2_month" ${currentFreq === "2_month" ? "selected" : ""}>2 months</option>
             <option value="3_month" ${currentFreq === "3_month" ? "selected" : ""}>3 months</option>
+            <option value="5_month" ${currentFreq === "5_month" ? "selected" : ""}>5 months</option>
             <option value="6_month" ${currentFreq === "6_month" ? "selected" : ""}>6 months</option>
           </select>
         </div>
@@ -2905,38 +2989,75 @@ function renderSubCard(sub) {
             <button class="btn small danger" onclick="startCancelFlow('${sub.id}')">Cancel</button>
           ` : `
             <button class="btn small ghost" onclick="skipNext('${sub.id}', ${nextBillingAttemptId || 'null'})">Skip Next</button>
-            <button class="btn small ghost" onclick="subAction('${sub.id}','pause')">Pause</button>
+            <button class="btn small ghost" onclick="startPauseFlow('${sub.id}', ${qty})">Pause</button>
           `}
         </div>
-        ${showCancelFlow ? renderCancelFlow(sub.id) : ""}
+        ${state.pauseFlowId === sub.id ? renderPauseFlow(sub.id, qty) : ""}
+        ${showCancelFlow ? renderCancelFlow(sub.id, qty) : ""}
       ` : `
         <div style="text-align:center;padding:16px 0">
           <p style="color:var(--text-muted);font-size:14px;margin-bottom:12px">Miss your daily HealthyBlood routine?</p>
           <button class="btn full" onclick="subAction('${sub.id}','reactivate')">Reactivate My Subscription</button>
+          <p style="font-size:12px;color:var(--text-muted);margin-top:10px">Reactivating restores access to Cora, your wellness coach</p>
         </div>
       `}
     </div>
   `;
 }
 
-function renderCancelFlow(subId) {
+// Detect package: qty 5 = Buy 3 Get 2 Free, qty 3 = Buy 2 Get 1 Free, qty 1 = Buy 1
+function getSuggestedInterval(qty) {
+  if (qty >= 5) return { months: 5, label: "every 5 months", package: "Buy 3 Get 2 Free" };
+  if (qty >= 3) return { months: 3, label: "every 3 months", package: "Buy 2 Get 1 Free" };
+  return { months: 3, label: "every 3 months", package: null };
+}
+
+function renderPauseFlow(subId, qty) {
+  const suggest = getSuggestedInterval(qty);
   return `
-    <div class="cancel-flow">
-      <h3>Before you go...</h3>
-      <p>Consistency is everything with HealthyBlood. Most customers start seeing real changes in their cholesterol after 4 to 8 weeks of daily use.</p>
+    <div class="cancel-flow" style="border-color:rgba(251,191,36,0.3)">
+      <h3>Are you sure?</h3>
+      <p>If you pause, you'll lose access to <strong>Cora, your personal wellness coach</strong>, along with your daily habit tracking and recipe library.</p>
       <div class="save-offer">
-        <strong>Would pausing work better?</strong>
-        <p>You can pause your deliveries and restart anytime. Your progress with Cora, your habits, and your lab history will all be saved.</p>
+        <strong>83% of users who follow Cora's advice see healthy numbers within 6 months</strong>
+        <p>Instead of pausing, what if we space out your deliveries to ${suggest.label}? You keep Cora, your progress, and the price you locked in.</p>
       </div>
       <div class="cancel-actions">
-        <button class="btn full" onclick="subAction('${subId}','pause'); state.cancelFlowId=null;">Pause Instead</button>
-        <button class="btn full ghost" onclick="state.cancelFlowId=null; render();">Never mind, keep my subscription</button>
-        <button class="btn full danger" style="margin-top:8px;opacity:0.7;font-size:13px" onclick="confirmCancel('${subId}')">I still want to cancel</button>
+        <button class="btn full" onclick="updateSubFrequency('${subId}','${suggest.months}_month'); state.pauseFlowId=null;">Switch to ${suggest.label}</button>
+        <button class="btn full ghost" onclick="state.pauseFlowId=null; render();">Never mind, keep everything</button>
+        <button class="btn full" style="margin-top:8px;opacity:0.6;font-size:13px;background:var(--bg);border:1px solid var(--border-soft);color:var(--text-muted)" onclick="confirmPause('${subId}')">Pause anyway</button>
       </div>
     </div>
   `;
 }
 
+function renderCancelFlow(subId, qty) {
+  const suggest = getSuggestedInterval(qty);
+  return `
+    <div class="cancel-flow">
+      <h3>We'd hate to see you go</h3>
+      <p>Cancelling means you'll lose access to <strong>Cora, your personal wellness coach</strong>, all your recipes, habit streaks, and lab history.</p>
+      <div class="save-offer">
+        <strong>83% of users who follow Cora's advice see healthy numbers within 6 months</strong>
+        <p>What if we spaced your deliveries to ${suggest.label} instead? You keep everything and save by ordering less often.</p>
+      </div>
+      <div class="cancel-actions">
+        <button class="btn full" onclick="updateSubFrequency('${subId}','${suggest.months}_month'); state.cancelFlowId=null;">Switch to ${suggest.label}</button>
+        <button class="btn full ghost" onclick="state.cancelFlowId=null; render();">Never mind, keep my subscription</button>
+        <button class="btn full" style="margin-top:8px;opacity:0.6;font-size:13px;background:var(--bg);border:1px solid var(--border-soft);color:var(--text-muted)" onclick="confirmCancel('${subId}')">I still want to cancel</button>
+      </div>
+    </div>
+  `;
+}
+
+function startPauseFlow(id, qty) {
+  state.pauseFlowId = id;
+  render();
+}
+function confirmPause(id) {
+  state.pauseFlowId = null;
+  subAction(id, "pause");
+}
 function startCancelFlow(id) {
   state.cancelFlowId = id;
   render();
@@ -3028,6 +3149,8 @@ function skipNext(subId, billingAttemptId) {
     setTimeout(() => { state.banner = null; render(); }, 4000);
   });
 }
+window.startPauseFlow = startPauseFlow;
+window.confirmPause = confirmPause;
 window.startCancelFlow = startCancelFlow;
 window.confirmCancel = confirmCancel;
 window.updateSubFrequency = updateSubFrequency;
