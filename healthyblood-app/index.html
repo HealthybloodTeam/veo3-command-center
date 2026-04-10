@@ -2935,10 +2935,15 @@ function renderSubCard(sub) {
 
   // Next billing: find the earliest upcoming billing attempt
   const now = new Date();
+  const skipStatuses = ["completed", "skipped", "failed", "cancelled", "canceled", "refunded"];
   const upcoming = (sub.billing_attempts || [])
-    .filter(a => !a.completed_at && !a.status && new Date(a.date) > now)
-    .sort((a, b) => new Date(a.date) - new Date(b.date));
-  const nextCharge = upcoming[0]?.date || null;
+    .filter(a => {
+      const st = (a.status || "").toLowerCase();
+      return !skipStatuses.includes(st) && new Date(a.date || a.billing_date || a.scheduled_at) > now;
+    })
+    .sort((a, b) => new Date(a.date || a.billing_date) - new Date(b.date || b.billing_date));
+  // Fallback: Seal often puts next date directly on the subscription object
+  const nextCharge = upcoming[0]?.date || upcoming[0]?.billing_date || sub.next_billing_date || sub.next_charge_scheduled_at || null;
   const nextBillingAttemptId = upcoming[0]?.id || null;
 
   // Price: use total_value or first item's final_price
@@ -3135,8 +3140,7 @@ function updateSubQty(id, qty) {
   state.actionBusy = id; state.banner = null; render();
 
   const item = sub.items[0];
-  // Remove old item, then add back with new quantity
-  const removeBody = { id: parseInt(id), action: "remove_items", remove_items: [item.id] };
+  // Add new item first, THEN remove old — Seal won't let you remove the last item
   const addBody = {
     id: parseInt(id),
     action: "add_items",
@@ -3152,12 +3156,13 @@ function updateSubQty(id, qty) {
       one_time: 0,
     }],
   };
+  const removeBody = { id: parseInt(id), action: "remove_items", remove_items: [item.id] };
 
-  // Sequential: remove then add
+  // Sequential: add first, then remove old — keeps subscription non-empty at all times
   fetch(API + `/hb/subscription/${id}/edit-items`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ remove: removeBody, add: addBody }),
+    body: JSON.stringify({ add: addBody, remove: removeBody }),
   }).then(r => r.json()).then(data => {
     if (data.error) throw new Error(data.error);
     state.banner = { type: "success", msg: "Quantity updated!" };
@@ -3211,6 +3216,11 @@ async function loadSubs() {
     console.log("[Subs] API response keys:", Object.keys(data), "raw_keys:", data._raw_keys);
     state.subs = Array.isArray(data) ? data : (data.subscriptions || data.data || []);
     console.log("[Subs] Parsed", state.subs.length, "subscriptions", state.subs.length > 0 ? "first keys:" : "", state.subs[0] ? Object.keys(state.subs[0]) : []);
+    if (state.subs[0]) {
+      const s = state.subs[0];
+      console.log("[Subs] Next date fields:", { next_billing_date: s.next_billing_date, next_charge_scheduled_at: s.next_charge_scheduled_at, billing_date: s.billing_date, next_charge_date: s.next_charge_date });
+      console.log("[Subs] billing_attempts:", JSON.stringify((s.billing_attempts || []).slice(0, 3)));
+    }
   } catch (e) {
     console.error("[Subs] Error:", e.message);
     state.subsError = e.message;
