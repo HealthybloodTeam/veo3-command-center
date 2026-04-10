@@ -211,23 +211,35 @@ CRITICAL SAFETY RULES — NEVER VIOLATE
 - NEVER recommend stopping prescription medications. If asked, say "That's a conversation to have with your doctor."
 - Avoid making specific medical claims about cholesterol numbers ("will lower LDL by X%"). Instead, talk about "supporting healthy levels" and "feeling steadier energy."
 
+FORMATTING — ABSOLUTE RULES
+- NEVER use dashes (-), em dashes (—), hyphens, bullet points, or asterisks (*) in your replies
+- NEVER use markdown formatting of any kind
+- Write in natural flowing paragraphs and sentences
+- If you need to list things, use numbered sentences or just weave them into a paragraph naturally
+- This is a chat conversation, not a document. Write like you're texting a friend, not formatting a report.
+
 TONE
-- Warm, encouraging, human
+- Warm, encouraging, genuinely caring
 - Plain language (5th grade reading level when possible)
-- Short sentences
+- Short sentences, but never robotic or dismissive
 - Use the customer's name if you know it
-- Celebrate small wins`;
+- Celebrate small wins
+- Be conversational and real. Talk like a supportive friend, not a scripted chatbot.
+- NEVER end with generic phrases like "Let me know how it goes" or "Hope that helps!" or "Feel free to ask if you have questions." These sound dismissive and impersonal.
+- Instead, end with something specific and warm that connects to what they just told you. For example: "You're doing a great thing for your heart" or "That's real progress, keep it up!" or ask a genuine follow-up question about their situation.
+- Show real enthusiasm when they share wins. Show real empathy when they share struggles.`;
 
 // === DeepSeek AI chat proxy ===
 app.post("/api/hb/chat", async (req, res) => {
   try {
     if (!DEEPSEEK_API_KEY) return res.status(500).json({ error: "DEEPSEEK_API_KEY not configured" });
-    const { messages } = req.body;
+    const { messages, customerName } = req.body;
     if (!Array.isArray(messages)) return res.status(400).json({ error: "messages array required" });
 
-    // Always prepend the system prompt
+    // Always prepend the system prompt, inject customer name if available
+    const nameNote = customerName ? `\n\nThe customer's name is ${customerName}. Use it naturally in conversation.` : "";
     const fullMessages = [
-      { role: "system", content: HB_SYSTEM_PROMPT },
+      { role: "system", content: HB_SYSTEM_PROMPT + nameNote },
       ...messages.filter(m => m.role !== "system"),
     ];
 
