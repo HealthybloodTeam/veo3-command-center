@@ -1590,6 +1590,123 @@
     letter-spacing: 0.5px;
   }
 
+  /* Loyalty reward tracker */
+  .loyalty-card {
+    background: linear-gradient(180deg, var(--bg-card), #0a1e2e);
+    border: 1px solid rgba(74, 222, 128, 0.15);
+    border-radius: 20px;
+    padding: 22px;
+  }
+  .loyalty-card.unlocked {
+    border-color: rgba(74, 222, 128, 0.4);
+    background: linear-gradient(180deg, var(--bg-card), #0a2e1d);
+  }
+  .loyalty-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 18px;
+  }
+  .loyalty-icon { font-size: 28px; }
+  .loyalty-title {
+    font-family: var(--serif);
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .loyalty-sub {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+  .loyalty-bar-bg {
+    background: rgba(255,255,255,0.08);
+    border-radius: 10px;
+    height: 8px;
+    overflow: hidden;
+    margin-bottom: 18px;
+  }
+  .loyalty-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), #34d399);
+    border-radius: 10px;
+    transition: width 0.6s ease;
+  }
+  .loyalty-steps {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 14px;
+  }
+  .loyalty-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    flex: 1;
+  }
+  .step-dot {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.06);
+    border: 2px solid var(--border-soft);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-muted);
+    transition: all 0.3s;
+  }
+  .loyalty-step.done .step-dot {
+    background: rgba(74, 222, 128, 0.15);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .loyalty-step.reward .step-dot {
+    font-size: 16px;
+    border-style: dashed;
+  }
+  .loyalty-step.reward.done .step-dot {
+    border-style: solid;
+    background: rgba(74, 222, 128, 0.2);
+    border-color: var(--accent);
+  }
+  .step-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-weight: 500;
+  }
+  .loyalty-hint {
+    text-align: center;
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-top: 4px;
+  }
+  .loyalty-code-box {
+    text-align: center;
+    margin-top: 14px;
+    padding: 16px;
+    background: rgba(74, 222, 128, 0.06);
+    border: 1px dashed rgba(74, 222, 128, 0.3);
+    border-radius: 14px;
+  }
+  .loyalty-code-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+  .loyalty-code {
+    font-family: "SF Mono", "Fira Code", monospace;
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--accent);
+    letter-spacing: 1.5px;
+  }
+
   /* Retention / cancel flow overlay */
   .cancel-flow {
     background: linear-gradient(180deg, var(--bg-card), #1a0a0a);
@@ -1924,6 +2041,8 @@ const state = {
   orders: null,
   ordersLoading: false,
   ordersError: null,
+  loyaltyCode: localStorage.getItem("hb_loyalty_code") || null,
+  loyaltyClaiming: false,
   // Health: lab results [{date:"2026-04-09", ldl:120, hdl:55, total:200, trig:140}, ...]
   labs: JSON.parse(localStorage.getItem("hb_labs") || "[]"),
   healthSubtab: "labs", // "labs" | "recipes"
@@ -2942,6 +3061,7 @@ function viewSubs() {
       ${state.banner ? `<div class="${state.banner.type}-banner">${esc(state.banner.msg)}</div>` : ""}
       ${renderSubsContent()}
     </div>
+    ${renderLoyaltyTracker()}
     <div class="section" style="margin-top:8px;">
       <h3 style="font-family:var(--serif);font-size:18px;margin-bottom:12px;">Order History</h3>
       ${renderOrderHistory()}
@@ -2968,6 +3088,98 @@ function renderSubsContent() {
   }
   return state.subs.map(sub => renderSubCard(sub)).join("");
 }
+function renderLoyaltyTracker() {
+  // Count paid orders (not cancelled/refunded)
+  const paidOrders = (state.orders || []).filter(o => {
+    const fs = (o.financial_status || "").toLowerCase();
+    return fs === "paid" || fs === "partially_paid" || fs === "authorized";
+  });
+  const count = paidOrders.length;
+  const goal = 3;
+  const progress = Math.min(count, goal);
+  const unlocked = progress >= goal;
+  const pct = Math.round((progress / goal) * 100);
+
+  // Don't show if orders haven't loaded yet
+  if (!state.orders) return "";
+
+  return `
+    <div class="section" style="margin-top:8px;">
+      <div class="loyalty-card ${unlocked ? "unlocked" : ""}">
+        <div class="loyalty-header">
+          <div class="loyalty-icon">${unlocked ? "🎉" : "🎯"}</div>
+          <div>
+            <div class="loyalty-title">${unlocked ? "You unlocked 25% off!" : "Loyalty Reward"}</div>
+            <div class="loyalty-sub">${unlocked ? "Thank you for being a loyal customer" : `${progress} of ${goal} orders toward 25% off`}</div>
+          </div>
+        </div>
+        <div class="loyalty-bar-bg">
+          <div class="loyalty-bar-fill" style="width:${pct}%"></div>
+        </div>
+        <div class="loyalty-steps">
+          ${[1, 2, 3].map(i => `
+            <div class="loyalty-step ${i <= progress ? "done" : ""}">
+              <div class="step-dot">${i <= progress ? "✓" : i}</div>
+              <div class="step-label">Order ${i}</div>
+            </div>
+          `).join("")}
+          <div class="loyalty-step reward ${unlocked ? "done" : ""}">
+            <div class="step-dot">🏷</div>
+            <div class="step-label">25% Off</div>
+          </div>
+        </div>
+        ${unlocked ? `
+          ${state.loyaltyCode ? `
+            <div class="loyalty-code-box">
+              <div class="loyalty-code-label">Your discount code</div>
+              <div class="loyalty-code">${esc(state.loyaltyCode)}</div>
+              <button class="btn full" onclick="copyLoyaltyCode()" style="margin-top:10px;font-size:13px;">Copy Code</button>
+            </div>
+          ` : `
+            <button class="btn full" onclick="claimLoyaltyDiscount()" ${state.loyaltyClaiming ? "disabled" : ""} style="margin-top:14px;">
+              ${state.loyaltyClaiming ? "Generating your code…" : "Claim Your 25% Discount"}
+            </button>
+          `}
+        ` : `
+          <p class="loyalty-hint">${goal - progress === 1 ? "Just 1 more order to go!" : `${goal - progress} more orders to unlock your reward`}</p>
+        `}
+      </div>
+    </div>
+  `;
+}
+
+function claimLoyaltyDiscount() {
+  state.loyaltyClaiming = true; render();
+  fetch(API + "/hb/loyalty-discount", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email: state.email, firstName: state.name }),
+  }).then(r => r.json()).then(data => {
+    if (data.error) throw new Error(data.error);
+    state.loyaltyCode = data.code;
+    localStorage.setItem("hb_loyalty_code", data.code);
+    state.banner = { type: "success", msg: "Your 25% discount code is ready!" };
+    state.loyaltyClaiming = false;
+    render();
+    setTimeout(() => { state.banner = null; render(); }, 5000);
+  }).catch(e => {
+    state.banner = { type: "error", msg: e.message };
+    state.loyaltyClaiming = false;
+    render();
+    setTimeout(() => { state.banner = null; render(); }, 4000);
+  });
+}
+window.claimLoyaltyDiscount = claimLoyaltyDiscount;
+
+function copyLoyaltyCode() {
+  navigator.clipboard.writeText(state.loyaltyCode).then(() => {
+    state.banner = { type: "success", msg: "Discount code copied!" };
+    render();
+    setTimeout(() => { state.banner = null; render(); }, 3000);
+  });
+}
+window.copyLoyaltyCode = copyLoyaltyCode;
+
 function renderOrderHistory() {
   if (state.ordersLoading) {
     return `<div class="loading-state"><div class="spinner"></div><div>Loading order history…</div></div>`;

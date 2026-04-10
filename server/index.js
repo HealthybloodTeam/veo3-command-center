@@ -505,6 +505,77 @@ app.get("/api/hb/orders", async (req, res) => {
   }
 });
 
+// ==========================================
+// Shopify Admin API — Loyalty Discount (25% off after 3 orders)
+// ==========================================
+app.post("/api/hb/loyalty-discount", async (req, res) => {
+  try {
+    if (!SHOPIFY_DOMAIN || !SHOPIFY_ADMIN_TOKEN) {
+      return res.status(500).json({ error: "Shopify Admin API not configured" });
+    }
+    const { email, firstName } = req.body;
+    if (!email) return res.status(400).json({ error: "email required" });
+
+    const SHOPIFY_API = `https://${SHOPIFY_DOMAIN}/admin/api/2024-01`;
+    const headers = { "X-Shopify-Access-Token": SHOPIFY_ADMIN_TOKEN, "Content-Type": "application/json" };
+
+    // Generate a unique code: HB25-FIRSTNAME-XXXX
+    const suffix = Math.random().toString(36).substring(2, 6).toUpperCase();
+    const name = (firstName || "LOYAL").toUpperCase().replace(/[^A-Z]/g, "").substring(0, 8);
+    const code = `HB25-${name}-${suffix}`;
+
+    console.log("[Shopify] Creating loyalty discount:", code, "for:", email);
+
+    // Step 1: Create price rule — 25% off, single use, tied to this customer email
+    const priceRuleBody = {
+      price_rule: {
+        title: `Loyalty 25% — ${email}`,
+        target_type: "line_item",
+        target_selection: "all",
+        allocation_method: "across",
+        value_type: "percentage",
+        value: "-25.0",
+        customer_selection: "prerequisite",
+        prerequisite_customer_ids: [],
+        once_per_customer: true,
+        usage_limit: 1,
+        starts_at: new Date().toISOString(),
+      },
+    };
+
+    const r1 = await fetch(`${SHOPIFY_API}/price_rules.json`, {
+      method: "POST", headers, body: JSON.stringify(priceRuleBody),
+    });
+    const d1 = await r1.json();
+    console.log("[Shopify] Price rule response:", r1.status);
+
+    if (!r1.ok || !d1.price_rule?.id) {
+      console.error("[Shopify] Price rule error:", JSON.stringify(d1));
+      return res.status(r1.status).json({ error: d1.errors || "Failed to create price rule" });
+    }
+
+    const priceRuleId = d1.price_rule.id;
+
+    // Step 2: Create discount code under that price rule
+    const r2 = await fetch(`${SHOPIFY_API}/price_rules/${priceRuleId}/discount_codes.json`, {
+      method: "POST", headers,
+      body: JSON.stringify({ discount_code: { code } }),
+    });
+    const d2 = await r2.json();
+    console.log("[Shopify] Discount code response:", r2.status, d2.discount_code?.code);
+
+    if (!r2.ok || !d2.discount_code?.code) {
+      console.error("[Shopify] Discount code error:", JSON.stringify(d2));
+      return res.status(r2.status).json({ error: d2.errors || "Failed to create discount code" });
+    }
+
+    res.json({ code: d2.discount_code.code, priceRuleId });
+  } catch (err) {
+    console.error("[Shopify] Loyalty discount error:", err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Veo 3 Proxy + HealthyBlood App running on port ${PORT}`);
 });
