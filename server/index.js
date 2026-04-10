@@ -569,7 +569,49 @@ app.post("/api/hb/loyalty-discount", async (req, res) => {
       return res.status(r2.status).json({ error: d2.errors || "Failed to create discount code" });
     }
 
-    res.json({ code: d2.discount_code.code, priceRuleId });
+    // Step 3: Apply discount code to their Seal subscription
+    let applied = false;
+    const { subscriptionId } = req.body;
+    if (subscriptionId && SEAL_API_TOKEN) {
+      console.log("[Seal] Applying discount", code, "to subscription", subscriptionId);
+
+      // Try apply_discount action first
+      const sealPayload = {
+        id: parseInt(subscriptionId),
+        action: "apply_discount",
+        apply_discount: { discount_code: code },
+      };
+      const r3 = await fetch(`${SEAL_BASE}/subscription`, {
+        method: "PUT",
+        headers: { "X-Seal-Token": SEAL_API_TOKEN, "Content-Type": "application/json" },
+        body: JSON.stringify(sealPayload),
+      });
+      const d3 = await r3.json();
+      console.log("[Seal] apply_discount response:", r3.status, JSON.stringify(d3));
+
+      if (d3.success) {
+        applied = true;
+      } else {
+        // Fallback: try edit action with discount_code
+        console.log("[Seal] apply_discount failed, trying edit with discount_code");
+        const sealEdit = {
+          id: parseInt(subscriptionId),
+          action: "edit",
+          edit: { discount_code: code },
+        };
+        const r4 = await fetch(`${SEAL_BASE}/subscription`, {
+          method: "PUT",
+          headers: { "X-Seal-Token": SEAL_API_TOKEN, "Content-Type": "application/json" },
+          body: JSON.stringify(sealEdit),
+        });
+        const d4 = await r4.json();
+        console.log("[Seal] edit discount_code response:", r4.status, JSON.stringify(d4));
+        if (d4.success) applied = true;
+      }
+    }
+
+    console.log("[Loyalty] Done — code:", code, "applied:", applied);
+    res.json({ code: d2.discount_code.code, priceRuleId, applied });
   } catch (err) {
     console.error("[Shopify] Loyalty discount error:", err.message);
     res.status(500).json({ error: err.message });

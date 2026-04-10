@@ -1706,6 +1706,19 @@
     color: var(--accent);
     letter-spacing: 1.5px;
   }
+  .loyalty-applied-badge {
+    display: inline-block;
+    background: rgba(74, 222, 128, 0.15);
+    color: var(--accent);
+    font-size: 12px;
+    font-weight: 700;
+    padding: 5px 12px;
+    border-radius: 20px;
+    border: 1px solid rgba(74, 222, 128, 0.3);
+    margin-bottom: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
 
   /* Retention / cancel flow overlay */
   .cancel-flow {
@@ -2042,6 +2055,7 @@ const state = {
   ordersLoading: false,
   ordersError: null,
   loyaltyCode: localStorage.getItem("hb_loyalty_code") || null,
+  loyaltyApplied: localStorage.getItem("hb_loyalty_applied") === "true",
   loyaltyClaiming: false,
   // Health: lab results [{date:"2026-04-09", ldl:120, hdl:55, total:200, trig:140}, ...]
   labs: JSON.parse(localStorage.getItem("hb_labs") || "[]"),
@@ -3131,13 +3145,21 @@ function renderLoyaltyTracker() {
         ${unlocked ? `
           ${state.loyaltyCode ? `
             <div class="loyalty-code-box">
-              <div class="loyalty-code-label">Your discount code</div>
-              <div class="loyalty-code">${esc(state.loyaltyCode)}</div>
-              <button class="btn full" onclick="copyLoyaltyCode()" style="margin-top:10px;font-size:13px;">Copy Code</button>
+              ${state.loyaltyApplied ? `
+                <div class="loyalty-applied-badge">Applied to your next order</div>
+                <div class="loyalty-code-label">Discount code</div>
+                <div class="loyalty-code">${esc(state.loyaltyCode)}</div>
+                <p style="font-size:12px;color:var(--text-muted);margin-top:10px;">25% off will be automatically applied to your next subscription delivery.</p>
+              ` : `
+                <div class="loyalty-code-label">Your discount code</div>
+                <div class="loyalty-code">${esc(state.loyaltyCode)}</div>
+                <p style="font-size:12px;color:var(--text-muted);margin-top:8px;">Use this code at checkout for 25% off your next order.</p>
+                <button class="btn full" onclick="copyLoyaltyCode()" style="margin-top:10px;font-size:13px;">Copy Code</button>
+              `}
             </div>
           ` : `
             <button class="btn full" onclick="claimLoyaltyDiscount()" ${state.loyaltyClaiming ? "disabled" : ""} style="margin-top:14px;">
-              ${state.loyaltyClaiming ? "Generating your code…" : "Claim Your 25% Discount"}
+              ${state.loyaltyClaiming ? "Applying to your next order…" : "Apply 25% Off to Next Order"}
             </button>
           `}
         ` : `
@@ -3150,15 +3172,23 @@ function renderLoyaltyTracker() {
 
 function claimLoyaltyDiscount() {
   state.loyaltyClaiming = true; render();
+  // Find the active subscription ID to apply discount to
+  const activeSub = (state.subs || []).find(s => (s.status || "").toLowerCase() === "active");
+  const subscriptionId = activeSub ? activeSub.id : null;
+
   fetch(API + "/hb/loyalty-discount", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email: state.email, firstName: state.name }),
+    body: JSON.stringify({ email: state.email, firstName: state.name, subscriptionId }),
   }).then(r => r.json()).then(data => {
     if (data.error) throw new Error(data.error);
     state.loyaltyCode = data.code;
+    state.loyaltyApplied = !!data.applied;
     localStorage.setItem("hb_loyalty_code", data.code);
-    state.banner = { type: "success", msg: "Your 25% discount code is ready!" };
+    localStorage.setItem("hb_loyalty_applied", data.applied ? "true" : "false");
+    state.banner = { type: "success", msg: data.applied
+      ? "25% off applied to your next subscription order!"
+      : "Your 25% discount code is ready!" };
     state.loyaltyClaiming = false;
     render();
     setTimeout(() => { state.banner = null; render(); }, 5000);
