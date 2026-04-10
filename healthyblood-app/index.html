@@ -1636,27 +1636,31 @@
     display: flex;
     justify-content: space-between;
     margin-bottom: 14px;
+    gap: 2px;
+    overflow-x: auto;
   }
   .loyalty-step {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 6px;
+    gap: 4px;
     flex: 1;
+    min-width: 0;
   }
   .step-dot {
-    width: 32px;
-    height: 32px;
+    width: 28px;
+    height: 28px;
     border-radius: 50%;
     background: rgba(255,255,255,0.06);
     border: 2px solid var(--border-soft);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 13px;
+    font-size: 11px;
     font-weight: 700;
     color: var(--text-muted);
     transition: all 0.3s;
+    flex-shrink: 0;
   }
   .loyalty-step.done .step-dot {
     background: rgba(74, 222, 128, 0.15);
@@ -1673,9 +1677,10 @@
     border-color: var(--accent);
   }
   .step-label {
-    font-size: 11px;
+    font-size: 9px;
     color: var(--text-muted);
     font-weight: 500;
+    white-space: nowrap;
   }
   .loyalty-hint {
     text-align: center;
@@ -1699,13 +1704,6 @@
     font-weight: 600;
     margin-bottom: 8px;
   }
-  .loyalty-code {
-    font-family: "SF Mono", "Fira Code", monospace;
-    font-size: 20px;
-    font-weight: 800;
-    color: var(--accent);
-    letter-spacing: 1.5px;
-  }
   .loyalty-applied-badge {
     display: inline-block;
     background: rgba(74, 222, 128, 0.15);
@@ -1715,9 +1713,43 @@
     padding: 5px 12px;
     border-radius: 20px;
     border: 1px solid rgba(74, 222, 128, 0.3);
-    margin-bottom: 12px;
+    margin-bottom: 4px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+  }
+  .mystery-reveal {
+    text-align: center;
+    margin-top: 14px;
+    padding: 20px 16px;
+    background: linear-gradient(135deg, rgba(251,191,36,0.08), rgba(74,222,128,0.08));
+    border: 1px dashed rgba(251,191,36,0.35);
+    border-radius: 16px;
+    animation: giftPulse 2s ease-in-out infinite;
+  }
+  @keyframes giftPulse {
+    0%, 100% { border-color: rgba(251,191,36,0.35); }
+    50% { border-color: rgba(74,222,128,0.5); }
+  }
+  .mystery-gift-icon {
+    font-size: 40px;
+    margin-bottom: 8px;
+    animation: giftBounce 1.5s ease-in-out infinite;
+  }
+  @keyframes giftBounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-6px); }
+  }
+  .mystery-text {
+    font-family: var(--serif);
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .loyalty-warn {
+    text-align: center;
+    font-size: 11px;
+    color: rgba(251,191,36,0.7);
+    margin-top: 6px;
   }
 
   /* Retention / cancel flow overlay */
@@ -2054,8 +2086,7 @@ const state = {
   orders: null,
   ordersLoading: false,
   ordersError: null,
-  loyaltyCode: localStorage.getItem("hb_loyalty_code") || null,
-  loyaltyApplied: localStorage.getItem("hb_loyalty_applied") === "true",
+  loyaltyTier: parseInt(localStorage.getItem("hb_loyalty_tier") || "0"),  // 0=none, 1=10%, 2=15%
   loyaltyClaiming: false,
   // Health: lab results [{date:"2026-04-09", ldl:120, hdl:55, total:200, trig:140}, ...]
   labs: JSON.parse(localStorage.getItem("hb_labs") || "[]"),
@@ -2551,7 +2582,7 @@ function viewRecipes() {
   const cat = state.recipeCategory;
   const filtered = cat === "all" ? RECIPES : RECIPES.filter(r => r.cat === cat);
   const subscribed = hasActiveSub();
-  const FREE_LIMIT = 5;
+  const FREE_LIMIT = 2;
   const freeRecipes = filtered.slice(0, FREE_LIMIT);
   const lockedRecipes = filtered.slice(FREE_LIMIT);
   const showLocked = !subscribed && lockedRecipes.length > 0;
@@ -2616,7 +2647,7 @@ function viewRecipeDetail() {
   if (!hasActiveSub()) {
     const cat = r.cat;
     const catRecipes = cat ? RECIPES.filter(x => x.cat === cat) : RECIPES;
-    const freeIds = catRecipes.slice(0, 5).map(x => x.id);
+    const freeIds = catRecipes.slice(0, 2).map(x => x.id);
     if (!freeIds.includes(r.id)) {
       state.selectedRecipe = null;
       return viewRecipes();
@@ -3102,29 +3133,54 @@ function renderSubsContent() {
   }
   return state.subs.map(sub => renderSubCard(sub)).join("");
 }
-function renderLoyaltyTracker() {
-  // Count paid orders (not cancelled/refunded)
-  const paidOrders = (state.orders || []).filter(o => {
-    const fs = (o.financial_status || "").toLowerCase();
-    return fs === "paid" || fs === "partially_paid" || fs === "authorized";
-  });
-  const count = paidOrders.length;
-  const goal = 3;
-  const progress = Math.min(count, goal);
-  const unlocked = progress >= goal;
-  const pct = Math.round((progress / goal) * 100);
+// Consistency streak: count consecutive paid orders from most recent backward.
+// If the gap between any two consecutive orders exceeds 210 days (~7 months),
+// the streak breaks and progress resets. Covers up to 6-month intervals + buffer.
+function getConsistentStreak(orders) {
+  const paid = (orders || [])
+    .filter(o => {
+      const fs = (o.financial_status || "").toLowerCase();
+      return fs === "paid" || fs === "partially_paid" || fs === "authorized";
+    })
+    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at)); // newest first
+  if (paid.length === 0) return 0;
+  let streak = 1;
+  for (let i = 0; i < paid.length - 1; i++) {
+    const gap = (new Date(paid[i].created_at) - new Date(paid[i + 1].created_at)) / (1000 * 60 * 60 * 24);
+    if (gap > 210) break; // streak broken — gap too large
+    streak++;
+  }
+  return streak;
+}
 
-  // Don't show if orders haven't loaded yet
+function renderLoyaltyTracker() {
   if (!state.orders) return "";
+
+  const streak = getConsistentStreak(state.orders);
+  const tier1At = 3, tier2At = 6;
+  const tier1Unlocked = streak >= tier1At || state.loyaltyTier >= 1;
+  const tier2Unlocked = streak >= tier2At || state.loyaltyTier >= 2;
+  const currentTier = tier2Unlocked ? 2 : tier1Unlocked ? 1 : 0;
+  const progress = Math.min(streak, tier2At);
+  const pct = Math.round((progress / tier2At) * 100);
+
+  // Which tier can they claim next?
+  const canClaimTier1 = tier1Unlocked && state.loyaltyTier < 1;
+  const canClaimTier2 = tier2Unlocked && state.loyaltyTier < 2;
+  const nextClaim = canClaimTier2 ? 2 : canClaimTier1 ? 1 : 0;
+
+  // Steps toward next milestone
+  const nextGoal = state.loyaltyTier >= 1 ? tier2At : tier1At;
+  const remaining = Math.max(0, nextGoal - streak);
 
   return `
     <div class="section" style="margin-top:8px;">
-      <div class="loyalty-card ${unlocked ? "unlocked" : ""}">
+      <div class="loyalty-card ${currentTier > 0 ? "unlocked" : ""}">
         <div class="loyalty-header">
-          <div class="loyalty-icon">${unlocked ? "🎉" : "🎯"}</div>
+          <div class="loyalty-icon">${nextClaim ? "🎉" : "🎁"}</div>
           <div>
-            <div class="loyalty-title">${unlocked ? "You unlocked 25% off!" : "Loyalty Reward"}</div>
-            <div class="loyalty-sub">${unlocked ? "Thank you for being a loyal customer" : `${progress} of ${goal} orders toward 25% off`}</div>
+            <div class="loyalty-title">${nextClaim ? "You unlocked a mystery gift!" : "Loyalty Rewards"}</div>
+            <div class="loyalty-sub">${streak} consistent order${streak === 1 ? "" : "s"} · ${remaining > 0 ? `${remaining} more to next reward` : "All rewards unlocked!"}</div>
           </div>
         </div>
         <div class="loyalty-bar-bg">
@@ -3132,66 +3188,88 @@ function renderLoyaltyTracker() {
         </div>
         <div class="loyalty-steps">
           ${[1, 2, 3].map(i => `
-            <div class="loyalty-step ${i <= progress ? "done" : ""}">
-              <div class="step-dot">${i <= progress ? "✓" : i}</div>
+            <div class="loyalty-step ${i <= streak ? "done" : ""}">
+              <div class="step-dot">${i <= streak ? "✓" : i}</div>
               <div class="step-label">Order ${i}</div>
             </div>
           `).join("")}
-          <div class="loyalty-step reward ${unlocked ? "done" : ""}">
-            <div class="step-dot">🏷</div>
-            <div class="step-label">25% Off</div>
+          <div class="loyalty-step reward ${tier1Unlocked ? "done" : ""}">
+            <div class="step-dot">${tier1Unlocked ? (state.loyaltyTier >= 1 ? "✓" : "🎁") : "🎁"}</div>
+            <div class="step-label">${state.loyaltyTier >= 1 ? "10% Off" : "Gift 1"}</div>
+          </div>
+          ${[4, 5, 6].map(i => `
+            <div class="loyalty-step ${i <= streak ? "done" : ""}">
+              <div class="step-dot">${i <= streak ? "✓" : i}</div>
+              <div class="step-label">Order ${i}</div>
+            </div>
+          `).join("")}
+          <div class="loyalty-step reward ${tier2Unlocked ? "done" : ""}">
+            <div class="step-dot">${tier2Unlocked ? (state.loyaltyTier >= 2 ? "✓" : "🎁") : "🎁"}</div>
+            <div class="step-label">${state.loyaltyTier >= 2 ? "15% Off" : "Gift 2"}</div>
           </div>
         </div>
-        ${unlocked ? `
-          ${state.loyaltyCode ? `
-            <div class="loyalty-code-box">
-              ${state.loyaltyApplied ? `
-                <div class="loyalty-applied-badge">Applied to your next order</div>
-                <div class="loyalty-code-label">Discount code</div>
-                <div class="loyalty-code">${esc(state.loyaltyCode)}</div>
-                <p style="font-size:12px;color:var(--text-muted);margin-top:10px;">25% off will be automatically applied to your next subscription delivery.</p>
-              ` : `
-                <div class="loyalty-code-label">Your discount code</div>
-                <div class="loyalty-code">${esc(state.loyaltyCode)}</div>
-                <p style="font-size:12px;color:var(--text-muted);margin-top:8px;">Use this code at checkout for 25% off your next order.</p>
-                <button class="btn full" onclick="copyLoyaltyCode()" style="margin-top:10px;font-size:13px;">Copy Code</button>
-              `}
-            </div>
-          ` : `
-            <button class="btn full" onclick="claimLoyaltyDiscount()" ${state.loyaltyClaiming ? "disabled" : ""} style="margin-top:14px;">
-              ${state.loyaltyClaiming ? "Applying to your next order…" : "Apply 25% Off to Next Order"}
+
+        ${state.loyaltyTier >= 2 ? `
+          <div class="loyalty-code-box">
+            <div class="loyalty-applied-badge">15% off for life</div>
+            <p style="font-size:13px;color:var(--text-muted);margin-top:6px;">Your permanent 15% loyalty discount is applied to every future subscription order. Thank you for being a loyal customer!</p>
+          </div>
+        ` : state.loyaltyTier >= 1 && !canClaimTier2 ? `
+          <div class="loyalty-code-box">
+            <div class="loyalty-applied-badge">10% off for life</div>
+            <p style="font-size:13px;color:var(--text-muted);margin-top:6px;">Your permanent 10% loyalty discount is applied to every subscription order. Keep your streak going to unlock Gift 2!</p>
+          </div>
+        ` : ""}
+
+        ${nextClaim ? `
+          <div class="mystery-reveal">
+            <div class="mystery-gift-icon">🎁</div>
+            <div class="mystery-text">You've earned a mystery reward!</div>
+            <button class="btn full" onclick="claimLoyaltyReward(${nextClaim})" ${state.loyaltyClaiming ? "disabled" : ""} style="margin-top:12px;">
+              ${state.loyaltyClaiming ? "Unwrapping your gift…" : "Open Your Gift"}
             </button>
-          `}
-        ` : `
-          <p class="loyalty-hint">${goal - progress === 1 ? "Just 1 more order to go!" : `${goal - progress} more orders to unlock your reward`}</p>
-        `}
+          </div>
+        ` : remaining > 0 && state.loyaltyTier < 2 ? `
+          <p class="loyalty-hint">
+            ${streak === 0 ? "Start your streak to unlock mystery rewards!"
+              : remaining === 1 ? "Just 1 more consistent order to unlock your next gift!"
+              : `${remaining} more consistent orders to unlock your next gift`}
+          </p>
+          <p class="loyalty-warn">Inconsistent orders reset your progress. Keep your subscription active!</p>
+        ` : ""}
       </div>
     </div>
   `;
 }
 
-function claimLoyaltyDiscount() {
+function claimLoyaltyReward(tier) {
   state.loyaltyClaiming = true; render();
-  // Find the active subscription ID to apply discount to
   const activeSub = (state.subs || []).find(s => (s.status || "").toLowerCase() === "active");
-  const subscriptionId = activeSub ? activeSub.id : null;
+  if (!activeSub) {
+    state.banner = { type: "error", msg: "No active subscription found to apply discount." };
+    state.loyaltyClaiming = false; render();
+    setTimeout(() => { state.banner = null; render(); }, 4000);
+    return;
+  }
+  const discountPercent = tier === 2 ? 15 : 10;
 
-  fetch(API + "/hb/loyalty-discount", {
+  fetch(API + "/hb/loyalty-reward", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email: state.email, firstName: state.name, subscriptionId }),
+    body: JSON.stringify({
+      subscriptionId: activeSub.id,
+      discountPercent,
+      email: state.email,
+    }),
   }).then(r => r.json()).then(data => {
     if (data.error) throw new Error(data.error);
-    state.loyaltyCode = data.code;
-    state.loyaltyApplied = !!data.applied;
-    localStorage.setItem("hb_loyalty_code", data.code);
-    localStorage.setItem("hb_loyalty_applied", data.applied ? "true" : "false");
-    state.banner = { type: "success", msg: data.applied
-      ? "25% off applied to your next subscription order!"
-      : "Your 25% discount code is ready!" };
+    state.loyaltyTier = tier;
+    localStorage.setItem("hb_loyalty_tier", String(tier));
+    state.banner = { type: "success", msg: `🎉 Gift unlocked: ${discountPercent}% off your subscription for life!` };
     state.loyaltyClaiming = false;
+    loadSubs(); // reload to show updated price
     render();
-    setTimeout(() => { state.banner = null; render(); }, 5000);
+    setTimeout(() => { state.banner = null; render(); }, 6000);
   }).catch(e => {
     state.banner = { type: "error", msg: e.message };
     state.loyaltyClaiming = false;
@@ -3199,16 +3277,7 @@ function claimLoyaltyDiscount() {
     setTimeout(() => { state.banner = null; render(); }, 4000);
   });
 }
-window.claimLoyaltyDiscount = claimLoyaltyDiscount;
-
-function copyLoyaltyCode() {
-  navigator.clipboard.writeText(state.loyaltyCode).then(() => {
-    state.banner = { type: "success", msg: "Discount code copied!" };
-    render();
-    setTimeout(() => { state.banner = null; render(); }, 3000);
-  });
-}
-window.copyLoyaltyCode = copyLoyaltyCode;
+window.claimLoyaltyReward = claimLoyaltyReward;
 
 function renderOrderHistory() {
   if (state.ordersLoading) {

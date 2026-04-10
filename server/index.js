@@ -506,114 +506,80 @@ app.get("/api/hb/orders", async (req, res) => {
 });
 
 // ==========================================
-// Shopify Admin API — Loyalty Discount (25% off after 3 orders)
+// Loyalty Reward — Permanent discount on Seal subscription
+// Tier 1 (3 orders): 10% off for life
+// Tier 2 (6 orders): 15% off for life
+// Applies by editing item price directly in Seal (remove old, add at discounted price)
 // ==========================================
-app.post("/api/hb/loyalty-discount", async (req, res) => {
+app.post("/api/hb/loyalty-reward", async (req, res) => {
   try {
-    if (!SHOPIFY_DOMAIN || !SHOPIFY_ADMIN_TOKEN) {
-      return res.status(500).json({ error: "Shopify Admin API not configured" });
+    if (!SEAL_API_TOKEN) return res.status(500).json({ error: "Seal API not configured" });
+    const { subscriptionId, discountPercent, email } = req.body;
+    if (!subscriptionId || !discountPercent) return res.status(400).json({ error: "subscriptionId and discountPercent required" });
+
+    const subId = parseInt(subscriptionId);
+    const sealHeaders = { "X-Seal-Token": SEAL_API_TOKEN, "Content-Type": "application/json" };
+    console.log(`[Loyalty] Applying ${discountPercent}% permanent discount to sub ${subId} for ${email}`);
+
+    // Step 1: Fetch the subscription to get current item details
+    const fetchUrl = `${SEAL_BASE}/subscriptions?query=${encodeURIComponent(email)}&with-items=true`;
+    const fr = await fetch(fetchUrl, { headers: sealHeaders });
+    const fd = await fr.json();
+    const subs = fd.payload?.subscriptions || fd.payload || [];
+    const sub = (Array.isArray(subs) ? subs : [subs]).find(s => s.id === subId || String(s.id) === String(subId));
+
+    if (!sub || !sub.items?.[0]) {
+      console.error("[Loyalty] Subscription or items not found:", subId);
+      return res.status(404).json({ error: "Subscription not found" });
     }
-    const { email, firstName } = req.body;
-    if (!email) return res.status(400).json({ error: "email required" });
 
-    const SHOPIFY_API = `https://${SHOPIFY_DOMAIN}/admin/api/2024-01`;
-    const headers = { "X-Shopify-Access-Token": SHOPIFY_ADMIN_TOKEN, "Content-Type": "application/json" };
+    const item = sub.items[0];
+    const originalPrice = parseFloat(item.price || item.original_price);
+    const discountedPrice = (originalPrice * (1 - discountPercent / 100)).toFixed(2);
+    console.log(`[Loyalty] Item: ${item.title} | Original: $${originalPrice} → Discounted: $${discountedPrice} (${discountPercent}% off)`);
 
-    // Generate a unique code: HB25-FIRSTNAME-XXXX
-    const suffix = Math.random().toString(36).substring(2, 6).toUpperCase();
-    const name = (firstName || "LOYAL").toUpperCase().replace(/[^A-Z]/g, "").substring(0, 8);
-    const code = `HB25-${name}-${suffix}`;
-
-    console.log("[Shopify] Creating loyalty discount:", code, "for:", email);
-
-    // Step 1: Create price rule — 25% off, single use, tied to this customer email
-    const priceRuleBody = {
-      price_rule: {
-        title: `Loyalty 25% — ${email}`,
-        target_type: "line_item",
-        target_selection: "all",
-        allocation_method: "across",
-        value_type: "percentage",
-        value: "-25.0",
-        customer_selection: "prerequisite",
-        prerequisite_customer_ids: [],
-        once_per_customer: true,
-        usage_limit: 1,
-        starts_at: new Date().toISOString(),
-      },
+    // Step 2: Add new item at discounted price
+    const newItem = {
+      product_id: String(item.product_id),
+      variant_id: String(item.variant_id),
+      quantity: String(item.quantity || 1),
+      title: item.title,
+      sku: (item.sku && item.sku.trim()) ? item.sku.trim() : String(item.variant_id),
+      price: parseFloat(discountedPrice),
+      taxable: item.taxable || 1,
+      requires_shipping: item.requires_shipping || 1,
+      one_time: 0,
     };
 
-    const r1 = await fetch(`${SHOPIFY_API}/price_rules.json`, {
-      method: "POST", headers, body: JSON.stringify(priceRuleBody),
+    const r1 = await fetch(`${SEAL_BASE}/subscription`, {
+      method: "PUT", headers: sealHeaders,
+      body: JSON.stringify({ id: subId, action: "add_items", add_items: [newItem] }),
     });
     const d1 = await r1.json();
-    console.log("[Shopify] Price rule response:", r1.status);
+    console.log("[Loyalty] add_items response:", r1.status, JSON.stringify(d1));
+    if (!d1.success && !r1.ok) return res.status(r1.status).json({ error: d1.error || "Failed to add discounted item" });
 
-    if (!r1.ok || !d1.price_rule?.id) {
-      console.error("[Shopify] Price rule error:", JSON.stringify(d1));
-      return res.status(r1.status).json({ error: d1.errors || "Failed to create price rule" });
-    }
-
-    const priceRuleId = d1.price_rule.id;
-
-    // Step 2: Create discount code under that price rule
-    const r2 = await fetch(`${SHOPIFY_API}/price_rules/${priceRuleId}/discount_codes.json`, {
-      method: "POST", headers,
-      body: JSON.stringify({ discount_code: { code } }),
+    // Step 3: Remove old item
+    const r2 = await fetch(`${SEAL_BASE}/subscription`, {
+      method: "PUT", headers: sealHeaders,
+      body: JSON.stringify({ id: subId, action: "remove_items", remove_items: [item.id] }),
     });
     const d2 = await r2.json();
-    console.log("[Shopify] Discount code response:", r2.status, d2.discount_code?.code);
+    console.log("[Loyalty] remove_items response:", r2.status, JSON.stringify(d2));
 
-    if (!r2.ok || !d2.discount_code?.code) {
-      console.error("[Shopify] Discount code error:", JSON.stringify(d2));
-      return res.status(r2.status).json({ error: d2.errors || "Failed to create discount code" });
-    }
+    // Step 4: Also update the subscription's total_value
+    const totalValue = (parseFloat(discountedPrice) * (item.quantity || 1)).toFixed(2);
+    const r3 = await fetch(`${SEAL_BASE}/subscription`, {
+      method: "PUT", headers: sealHeaders,
+      body: JSON.stringify({ id: subId, action: "edit", edit: { admin_note: `Loyalty ${discountPercent}% off applied — ${new Date().toISOString().split("T")[0]}` } }),
+    });
+    const d3 = await r3.json();
+    console.log("[Loyalty] admin_note response:", r3.status);
 
-    // Step 3: Apply discount code to their Seal subscription
-    let applied = false;
-    const { subscriptionId } = req.body;
-    if (subscriptionId && SEAL_API_TOKEN) {
-      console.log("[Seal] Applying discount", code, "to subscription", subscriptionId);
-
-      // Try apply_discount action first
-      const sealPayload = {
-        id: parseInt(subscriptionId),
-        action: "apply_discount",
-        apply_discount: { discount_code: code },
-      };
-      const r3 = await fetch(`${SEAL_BASE}/subscription`, {
-        method: "PUT",
-        headers: { "X-Seal-Token": SEAL_API_TOKEN, "Content-Type": "application/json" },
-        body: JSON.stringify(sealPayload),
-      });
-      const d3 = await r3.json();
-      console.log("[Seal] apply_discount response:", r3.status, JSON.stringify(d3));
-
-      if (d3.success) {
-        applied = true;
-      } else {
-        // Fallback: try edit action with discount_code
-        console.log("[Seal] apply_discount failed, trying edit with discount_code");
-        const sealEdit = {
-          id: parseInt(subscriptionId),
-          action: "edit",
-          edit: { discount_code: code },
-        };
-        const r4 = await fetch(`${SEAL_BASE}/subscription`, {
-          method: "PUT",
-          headers: { "X-Seal-Token": SEAL_API_TOKEN, "Content-Type": "application/json" },
-          body: JSON.stringify(sealEdit),
-        });
-        const d4 = await r4.json();
-        console.log("[Seal] edit discount_code response:", r4.status, JSON.stringify(d4));
-        if (d4.success) applied = true;
-      }
-    }
-
-    console.log("[Loyalty] Done — code:", code, "applied:", applied);
-    res.json({ code: d2.discount_code.code, priceRuleId, applied });
+    console.log(`[Loyalty] Done — ${discountPercent}% permanent discount applied to sub ${subId}`);
+    res.json({ success: true, discountPercent, newPrice: discountedPrice, originalPrice });
   } catch (err) {
-    console.error("[Shopify] Loyalty discount error:", err.message);
+    console.error("[Loyalty] Error:", err.message);
     res.status(500).json({ error: err.message });
   }
 });
