@@ -347,29 +347,8 @@ app.get("/api/hb/subscription/:id", async (req, res) => {
   }
 });
 
-// Subscription actions: pause, resume, reactivate, cancel
-// Seal uses PUT to /subscription with { id, action } in body
-app.post("/api/hb/subscription/:id/:action", async (req, res) => {
-  try {
-    if (!SEAL_API_TOKEN) return res.status(500).json({ error: "SEAL_API_TOKEN not configured" });
-    const { id, action } = req.params;
-    const validActions = ["pause", "resume", "reactivate", "cancel"];
-    if (!validActions.includes(action)) return res.status(400).json({ error: "invalid action: " + action });
-
-    console.log("[Seal] Action:", action, "on subscription:", id);
-    const r = await fetch(`${SEAL_BASE}/subscription`, {
-      method: "PUT",
-      headers: { "X-Seal-Token": SEAL_API_TOKEN, "Content-Type": "application/json" },
-      body: JSON.stringify({ id: parseInt(id), action }),
-    });
-    const data = await r.json();
-    console.log("[Seal] Action response:", r.status, data.success !== undefined ? `success=${data.success}` : "");
-    res.status(r.status).json(data);
-  } catch (err) {
-    console.error("[Seal] Action error:", err.message);
-    res.status(500).json({ error: err.message });
-  }
-});
+// IMPORTANT: Specific routes MUST come before the wildcard :id/:action route
+// or Express will match "edit", "skip-next", "edit-items" as :action params.
 
 // Edit subscription (interval/frequency changes)
 // Seal uses PUT to /subscription with { id, action: "edit", edit: { ... } }
@@ -447,6 +426,30 @@ app.post("/api/hb/subscription/:id/edit-items", async (req, res) => {
     res.status(r2.status).json(d2);
   } catch (err) {
     console.error("[Seal] Edit items error:", err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Subscription actions: pause, resume, reactivate, cancel
+// MUST be LAST — this wildcard route catches :id/:action so specific routes above take priority
+app.post("/api/hb/subscription/:id/:action", async (req, res) => {
+  try {
+    if (!SEAL_API_TOKEN) return res.status(500).json({ error: "SEAL_API_TOKEN not configured" });
+    const { id, action } = req.params;
+    const validActions = ["pause", "resume", "reactivate", "cancel"];
+    if (!validActions.includes(action)) return res.status(400).json({ error: "invalid action: " + action });
+
+    console.log("[Seal] Action:", action, "on subscription:", id);
+    const r = await fetch(`${SEAL_BASE}/subscription`, {
+      method: "PUT",
+      headers: { "X-Seal-Token": SEAL_API_TOKEN, "Content-Type": "application/json" },
+      body: JSON.stringify({ id: parseInt(id), action }),
+    });
+    const data = await r.json();
+    console.log("[Seal] Action response:", r.status, data.success !== undefined ? `success=${data.success}` : "");
+    res.status(r.status).json(data);
+  } catch (err) {
+    console.error("[Seal] Action error:", err.message);
     res.status(500).json({ error: err.message });
   }
 });
