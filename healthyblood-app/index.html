@@ -2083,9 +2083,6 @@ const state = {
   pauseFlowId: null,
   skipFlowId: null,
   banner: null,
-  orders: null,
-  ordersLoading: false,
-  ordersError: null,
   loyaltyTier: parseInt(localStorage.getItem("hb_loyalty_tier") || "0"),  // 0=none, 1=10%, 2=15%
   loyaltyClaiming: false,
   // Health: lab results [{date:"2026-04-09", ldl:120, hdl:55, total:200, trig:140}, ...]
@@ -3133,30 +3130,42 @@ function renderSubsContent() {
   }
   return state.subs.map(sub => renderSubCard(sub)).join("");
 }
-// Consistency streak: count consecutive paid orders from most recent backward.
-// If the gap between any two consecutive orders exceeds 210 days (~7 months),
-// the streak breaks and progress resets. Covers up to 6-month intervals + buffer.
-function getConsistentStreak(orders) {
-  const paid = (orders || [])
-    .filter(o => {
-      const fs = (o.financial_status || "").toLowerCase();
-      return fs === "paid" || fs === "partially_paid" || fs === "authorized";
-    })
-    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at)); // newest first
-  if (paid.length === 0) return 0;
+// Get all billing attempts across all subs, sorted newest first
+function getAllBillingAttempts() {
+  if (!state.subs) return [];
+  const all = [];
+  for (const sub of state.subs) {
+    for (const a of (sub.billing_attempts || [])) {
+      all.push({ ...a, _subId: sub.id, _productName: sub.items?.[0]?.title || "HealthyBlood", _totalValue: sub.total_value });
+    }
+  }
+  return all.sort((a, b) => new Date(b.date || b.billing_date || 0) - new Date(a.date || a.billing_date || 0));
+}
+
+// Consistency streak: count consecutive completed billing attempts from most recent backward.
+// If the gap between any two exceeds 210 days (~7 months), the streak breaks.
+function getConsistentStreak() {
+  const attempts = getAllBillingAttempts()
+    .filter(a => {
+      const st = (a.status || "").toLowerCase();
+      return st === "completed" || st === "success" || st === "paid" || !!a.completed_at;
+    });
+  if (attempts.length === 0) return 0;
   let streak = 1;
-  for (let i = 0; i < paid.length - 1; i++) {
-    const gap = (new Date(paid[i].created_at) - new Date(paid[i + 1].created_at)) / (1000 * 60 * 60 * 24);
-    if (gap > 210) break; // streak broken — gap too large
+  for (let i = 0; i < attempts.length - 1; i++) {
+    const d1 = new Date(attempts[i].date || attempts[i].billing_date);
+    const d2 = new Date(attempts[i + 1].date || attempts[i + 1].billing_date);
+    const gap = (d1 - d2) / (1000 * 60 * 60 * 24);
+    if (gap > 210) break;
     streak++;
   }
   return streak;
 }
 
 function renderLoyaltyTracker() {
-  if (!state.orders) return "";
+  if (!state.subs) return "";
 
-  const streak = getConsistentStreak(state.orders);
+  const streak = getConsistentStreak();
   const tier1At = 3, tier2At = 6;
   const tier1Unlocked = streak >= tier1At || state.loyaltyTier >= 1;
   const tier2Unlocked = streak >= tier2At || state.loyaltyTier >= 2;
@@ -3280,42 +3289,32 @@ function claimLoyaltyReward(tier) {
 window.claimLoyaltyReward = claimLoyaltyReward;
 
 function renderOrderHistory() {
-  if (state.ordersLoading) {
-    return `<div class="loading-state"><div class="spinner"></div><div>Loading order history…</div></div>`;
-  }
-  if (state.ordersError) {
-    return `<div class="error-banner">${esc(state.ordersError)}</div>
-      <button class="btn full ghost" onclick="loadOrders()">Try Again</button>`;
-  }
-  if (!state.orders || state.orders.length === 0) {
+  if (!state.subs) return `<p style="color:var(--text-muted);font-size:14px;">Loading...</p>`;
+  const attempts = getAllBillingAttempts();
+  if (attempts.length === 0) {
     return `<p style="color:var(--text-muted);font-size:14px;">No past orders found for this account.</p>`;
   }
-  return state.orders.map(order => {
-    const date = formatDate(order.created_at);
-    const total = order.total_price ? `$${parseFloat(order.total_price).toFixed(2)}` : "";
-    const fulfillment = order.fulfillment_status || "unfulfilled";
-    const financial = order.financial_status || "pending";
+  return attempts.map((a, i) => {
+    const date = formatDate(a.date || a.billing_date);
+    const status = (a.status || "").toLowerCase();
+    const isCompleted = status === "completed" || status === "success" || status === "paid" || !!a.completed_at;
+    const isSkipped = status === "skipped";
+    const isFailed = status === "failed";
 
-    // Fulfillment badge color
-    const fulfillColors = { fulfilled: "#10b981", partial: "#f59e0b", unfulfilled: "#6b7280" };
-    const fulfillColor = fulfillColors[fulfillment] || "#6b7280";
-    const fulfillLabel = fulfillment === "fulfilled" ? "Delivered" : fulfillment === "partial" ? "Partially shipped" : "Processing";
-
-    // Line items summary
-    const items = (order.line_items || []).map(li =>
-      `${li.title}${li.variant_title ? " (" + esc(li.variant_title) + ")" : ""}${li.quantity > 1 ? " × " + li.quantity : ""}`
-    ).join(", ");
+    const statusLabel = isCompleted ? "Delivered" : isSkipped ? "Skipped" : isFailed ? "Failed" : "Scheduled";
+    const statusColor = isCompleted ? "#10b981" : isSkipped ? "#f59e0b" : isFailed ? "#ef4444" : "#6b7280";
+    const total = a._totalValue ? `$${parseFloat(a._totalValue).toFixed(2)}` : "";
 
     return `
       <div class="order-card">
         <div class="order-header">
-          <span class="order-number">${esc(order.name || "#" + order.order_number)}</span>
+          <span class="order-number">Order ${attempts.length - i}</span>
           <span class="order-date">${date}</span>
         </div>
-        <div class="order-items">${esc(items)}</div>
+        <div class="order-items">${esc(a._productName)}</div>
         <div class="order-footer">
-          <span class="order-total">${total} ${esc(order.currency || "USD")}</span>
-          <span class="order-status" style="color:${fulfillColor}">${fulfillLabel}</span>
+          <span class="order-total">${total}</span>
+          <span class="order-status" style="color:${statusColor}">${statusLabel}</span>
         </div>
       </div>
     `;
@@ -3656,19 +3655,6 @@ async function loadSubs() {
   }
   state.subsLoading = false; render();
 }
-async function loadOrders() {
-  state.ordersLoading = true; state.ordersError = null; render();
-  try {
-    const data = await apiGet(`/hb/orders?email=${encodeURIComponent(state.email)}`);
-    state.orders = Array.isArray(data) ? data : [];
-    console.log("[Orders] Loaded", state.orders.length, "orders");
-  } catch (e) {
-    console.error("[Orders] Error:", e.message);
-    state.ordersError = e.message;
-    state.orders = null;
-  }
-  state.ordersLoading = false; render();
-}
 async function subAction(id, action) {
   state.actionBusy = id; state.banner = null; render();
   const msgs = {
@@ -3860,7 +3846,6 @@ function bindEvents() {
       state.tab = tab;
       render();
       if (tab === "subs" && !state.subs && !state.subsLoading) loadSubs();
-      if (tab === "subs" && !state.orders && !state.ordersLoading) loadOrders();
     });
   });
 
@@ -3904,9 +3889,6 @@ function bindEvents() {
   // Auto-load subs + orders when entering tab
   if (state.tab === "subs" && !state.subs && !state.subsLoading && !state.subsError) {
     loadSubs();
-  }
-  if (state.tab === "subs" && !state.orders && !state.ordersLoading && !state.ordersError) {
-    loadOrders();
   }
 
   // Health sub-tabs

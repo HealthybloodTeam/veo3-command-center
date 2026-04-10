@@ -12,19 +12,9 @@ const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY || "";
 const SEAL_API_TOKEN = process.env.SEAL_API_TOKEN || "";
 const SEAL_API_SECRET = process.env.SEAL_API_SECRET || "";
 const SEAL_BASE = "https://app.sealsubscriptions.com/shopify/merchant/api";
-const SHOPIFY_DOMAIN = process.env.SHOPIFY_DOMAIN || "";       // e.g. "your-store.myshopify.com"
+// Shopify Admin API (optional — for future use if access token becomes available)
+const SHOPIFY_DOMAIN = process.env.SHOPIFY_DOMAIN || "";
 const SHOPIFY_ADMIN_TOKEN = process.env.SHOPIFY_ADMIN_TOKEN || "";
-const SHOPIFY_API_KEY = process.env.SHOPIFY_API_KEY || "";     // Client ID
-const SHOPIFY_API_SECRET = process.env.SHOPIFY_API_SECRET || ""; // Client Secret (shpss_)
-
-// Build Shopify auth header — use access token if available, otherwise Basic auth with key:secret
-function shopifyHeaders() {
-  if (SHOPIFY_ADMIN_TOKEN) {
-    return { "X-Shopify-Access-Token": SHOPIFY_ADMIN_TOKEN, "Content-Type": "application/json" };
-  }
-  const basic = Buffer.from(`${SHOPIFY_API_KEY}:${SHOPIFY_API_SECRET}`).toString("base64");
-  return { "Authorization": `Basic ${basic}`, "Content-Type": "application/json" };
-}
 
 app.use(cors());
 app.use(express.json({ limit: "50mb" }));
@@ -481,33 +471,6 @@ app.post("/api/hb/subscription/:id/:action", async (req, res) => {
     res.status(r.status).json(data);
   } catch (err) {
     console.error("[Seal] Action error:", err.message);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// ==========================================
-// Shopify Admin API — Order History
-// ==========================================
-app.get("/api/hb/orders", async (req, res) => {
-  try {
-    const hasShopify = SHOPIFY_DOMAIN && (SHOPIFY_ADMIN_TOKEN || (SHOPIFY_API_KEY && SHOPIFY_API_SECRET));
-    if (!hasShopify) {
-      return res.status(500).json({ error: "Shopify Admin API not configured" });
-    }
-    const email = req.query.email;
-    if (!email) return res.status(400).json({ error: "email required" });
-
-    const url = `https://${SHOPIFY_DOMAIN}/admin/api/2024-01/orders.json?email=${encodeURIComponent(email)}&status=any&limit=50&fields=id,name,order_number,created_at,total_price,currency,financial_status,fulfillment_status,line_items`;
-    console.log("[Shopify] Fetching orders for:", email, "auth:", SHOPIFY_ADMIN_TOKEN ? "token" : "basic");
-
-    const r = await fetch(url, { headers: shopifyHeaders() });
-    const data = await r.json();
-    console.log("[Shopify] Status:", r.status, "Orders:", data.orders?.length ?? 0);
-
-    if (!r.ok) return res.status(r.status).json({ error: data.errors || "Shopify API error" });
-    res.json(data.orders || []);
-  } catch (err) {
-    console.error("[Shopify] Orders error:", err.message);
     res.status(500).json({ error: err.message });
   }
 });
