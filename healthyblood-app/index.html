@@ -2578,7 +2578,8 @@ const RECIPE_CATEGORIES = [
 function viewRecipes() {
   const cat = state.recipeCategory;
   const filtered = cat === "all" ? RECIPES : RECIPES.filter(r => r.cat === cat);
-  const subscribed = hasActiveSub();
+  const subStatus = hasActiveSub();
+  const subscribed = subStatus === null ? true : subStatus; // assume subscribed until loaded
   const FREE_LIMIT = 2;
   const freeRecipes = filtered.slice(0, FREE_LIMIT);
   const lockedRecipes = filtered.slice(FREE_LIMIT);
@@ -2641,7 +2642,7 @@ function viewRecipeDetail() {
   const r = RECIPES.find(x => x.id === state.selectedRecipe);
   if (!r) return viewRecipes();
   // Check if this recipe is locked (beyond free limit for non-subscribers)
-  if (!hasActiveSub()) {
+  if (hasActiveSub() === false) {
     const cat = r.cat;
     const catRecipes = cat ? RECIPES.filter(x => x.cat === cat) : RECIPES;
     const freeIds = catRecipes.slice(0, 2).map(x => x.id);
@@ -2793,6 +2794,8 @@ function bindOnboarding() {
     completeOnboarding();
     state.tab = "home";
     render();
+    // Load subs immediately so gating works without visiting Plan tab
+    if (state.email && !state.subs && !state.subsLoading) loadSubs();
   };
   btn.addEventListener("click", submit);
   input.addEventListener("keydown", e => { if (e.key === "Enter") submit(); });
@@ -3003,8 +3006,10 @@ function getGreeting() {
 function capitalize(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : ""; }
 
 // === Cora Chat ===
+// Returns true if active sub, false if confirmed no active sub, null if not loaded yet
 function hasActiveSub() {
-  if (!state.subs || state.subs.length === 0) return false;
+  if (state.subs === null) return null; // not loaded yet — don't gate
+  if (state.subs.length === 0) return false;
   return state.subs.some(s => {
     const st = (s.status || "").toLowerCase();
     return st === "active";
