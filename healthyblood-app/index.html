@@ -3140,30 +3140,13 @@ function updateSubQty(id, qty) {
   state.actionBusy = id; state.banner = null; render();
 
   const item = sub.items[0];
-  console.log("[SubQty] Item fields:", JSON.stringify(item));
-  // Add new item first, THEN remove old — Seal won't let you remove the last item
-  const addBody = {
-    id: parseInt(id),
-    action: "add_items",
-    add_items: [{
-      product_id: item.product_id,
-      variant_id: item.variant_id,
-      quantity: qty,
-      title: item.title,
-      sku: item.sku || item.variant_sku || "",
-      price: item.original_price || item.price,
-      taxable: item.taxable || 0,
-      requires_shipping: item.requires_shipping || 1,
-      one_time: 0,
-    }],
-  };
-  const removeBody = { id: parseInt(id), action: "remove_items", remove_items: [item.id] };
+  console.log("[SubQty] Item:", item.id, "new qty:", qty);
 
-  // Sequential: add first, then remove old — keeps subscription non-empty at all times
+  // Use set_item_quantity — just needs item ID and new quantity, no SKU hassle
   fetch(API + `/hb/subscription/${id}/edit-items`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ add: addBody, remove: removeBody }),
+    body: JSON.stringify({ itemId: item.id, quantity: qty }),
   }).then(r => r.json()).then(data => {
     if (data.error) throw new Error(data.error);
     state.banner = { type: "success", msg: "Quantity updated!" };

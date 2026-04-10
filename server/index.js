@@ -396,34 +396,28 @@ app.post("/api/hb/subscription/:subId/skip-next", async (req, res) => {
   }
 });
 
-// Edit subscription items (add new item first, then remove old)
-// Must add BEFORE removing — Seal won't let you remove the last/only item
+// Edit subscription item quantity using set_item_quantity action
+// Much simpler than remove+add — just needs item ID and new quantity, no SKU required
 app.post("/api/hb/subscription/:id/edit-items", async (req, res) => {
   try {
     if (!SEAL_API_TOKEN) return res.status(500).json({ error: "SEAL_API_TOKEN not configured" });
-    const { add, remove } = req.body;
+    const { itemId, quantity } = req.body;
+    const subId = parseInt(req.params.id);
 
-    console.log("[Seal] Editing items — add first:", JSON.stringify(add), "then remove:", JSON.stringify(remove));
+    console.log("[Seal] set_item_quantity — sub:", subId, "item:", itemId, "qty:", quantity);
 
-    // Step 1: Add new item with desired quantity
-    const r1 = await fetch(`${SEAL_BASE}/subscription`, {
+    const r = await fetch(`${SEAL_BASE}/subscription`, {
       method: "PUT",
       headers: { "X-Seal-Token": SEAL_API_TOKEN, "Content-Type": "application/json" },
-      body: JSON.stringify(add),
+      body: JSON.stringify({
+        id: subId,
+        action: "set_item_quantity",
+        set_item_quantity: { id: itemId, quantity },
+      }),
     });
-    const d1 = await r1.json();
-    console.log("[Seal] Add response:", r1.status, d1);
-    if (!r1.ok) return res.status(r1.status).json(d1);
-
-    // Step 2: Remove old item (subscription now has 2 items, safe to remove)
-    const r2 = await fetch(`${SEAL_BASE}/subscription`, {
-      method: "PUT",
-      headers: { "X-Seal-Token": SEAL_API_TOKEN, "Content-Type": "application/json" },
-      body: JSON.stringify(remove),
-    });
-    const d2 = await r2.json();
-    console.log("[Seal] Remove response:", r2.status, d2);
-    res.status(r2.status).json(d2);
+    const data = await r.json();
+    console.log("[Seal] set_item_quantity response:", r.status, JSON.stringify(data));
+    res.status(r.status).json(data);
   } catch (err) {
     console.error("[Seal] Edit items error:", err.message);
     res.status(500).json({ error: err.message });
