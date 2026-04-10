@@ -477,8 +477,8 @@ app.post("/api/hb/subscription/:id/:action", async (req, res) => {
 
 // ==========================================
 // Loyalty Reward — Permanent discount on Seal subscription
-// Tier 1 (3 orders): 10% off for life
-// Tier 2 (6 orders): 15% off for life
+// Base: 20% off | Tier 1 (3 orders): 30% off | Tier 2 (6 orders): 35% off
+// Miss an order → resets to base 20%
 // Applies by editing item price directly in Seal (remove old, add at discounted price)
 // ==========================================
 app.post("/api/hb/loyalty-reward", async (req, res) => {
