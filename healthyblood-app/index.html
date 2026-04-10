@@ -3162,11 +3162,11 @@ function getConsistentStreak() {
   return streak;
 }
 
-// Loyalty tiers: base 20% → 30% at 3 orders → 35% at 6 orders
+// Loyalty tiers: base 20% → 25% at 3 orders → 30% at 6 orders
 // If streak breaks, reset to base 20%
 function getLoyaltyDiscount(streak) {
-  if (streak >= 6) return 35;
-  if (streak >= 3) return 30;
+  if (streak >= 6) return 30;
+  if (streak >= 3) return 25;
   return 20; // base discount
 }
 
@@ -3219,7 +3219,7 @@ function renderLoyaltyTracker() {
           `).join("")}
           <div class="loyalty-step reward ${tier1Unlocked ? "done" : ""}">
             <div class="step-dot">${tier1Unlocked ? (state.loyaltyTier >= 1 ? "✓" : "🎁") : "🎁"}</div>
-            <div class="step-label">${state.loyaltyTier >= 1 ? "30% Off" : "Gift 1"}</div>
+            <div class="step-label">${state.loyaltyTier >= 1 ? "25% Off" : "Gift 1"}</div>
           </div>
           ${[4, 5, 6].map(i => `
             <div class="loyalty-step ${i <= streak ? "done" : ""}">
@@ -3229,19 +3229,19 @@ function renderLoyaltyTracker() {
           `).join("")}
           <div class="loyalty-step reward ${tier2Unlocked ? "done" : ""}">
             <div class="step-dot">${tier2Unlocked ? (state.loyaltyTier >= 2 ? "✓" : "🎁") : "🎁"}</div>
-            <div class="step-label">${state.loyaltyTier >= 2 ? "35% Off" : "Gift 2"}</div>
+            <div class="step-label">${state.loyaltyTier >= 2 ? "30% Off" : "Gift 2"}</div>
           </div>
         </div>
 
         ${state.loyaltyTier >= 2 ? `
           <div class="loyalty-code-box">
-            <div class="loyalty-applied-badge">35% off your subscription</div>
-            <p style="font-size:13px;color:var(--text-muted);margin-top:6px;">Your maximum loyalty discount is active on every subscription order. Thank you for being a loyal customer!</p>
+            <div class="loyalty-applied-badge">30% off your subscription</div>
+            <p style="font-size:13px;color:var(--text-muted);margin-top:6px;">Keep your streak to keep this price for life!</p>
           </div>
         ` : state.loyaltyTier >= 1 && !canClaimTier2 ? `
           <div class="loyalty-code-box">
-            <div class="loyalty-applied-badge">30% off your subscription</div>
-            <p style="font-size:13px;color:var(--text-muted);margin-top:6px;">Your loyalty discount is active. Keep your streak going to unlock Gift 2!</p>
+            <div class="loyalty-applied-badge">25% off your subscription</div>
+            <p style="font-size:13px;color:var(--text-muted);margin-top:6px;">Keep your streak to keep this price for life!</p>
           </div>
         ` : ""}
 
@@ -3275,7 +3275,7 @@ function claimLoyaltyReward(tier) {
     setTimeout(() => { state.banner = null; render(); }, 4000);
     return;
   }
-  const discountPercent = tier === 2 ? 35 : 30;
+  const discountPercent = tier === 2 ? 30 : 25;
 
   fetch(API + "/hb/loyalty-reward", {
     method: "POST",
@@ -3289,7 +3289,7 @@ function claimLoyaltyReward(tier) {
     if (data.error) throw new Error(data.error);
     state.loyaltyTier = tier;
     localStorage.setItem("hb_loyalty_tier", String(tier));
-    state.banner = { type: "success", msg: `🎉 Gift unlocked: ${discountPercent}% off your subscription!` };
+    state.banner = { type: "success", msg: `🎉 Gift unlocked: ${discountPercent}% off! Keep your streak to keep this price for life!` };
     state.loyaltyClaiming = false;
     loadSubs();
     render();
