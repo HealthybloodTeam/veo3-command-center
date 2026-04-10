@@ -3140,6 +3140,7 @@ function updateSubQty(id, qty) {
   state.actionBusy = id; state.banner = null; render();
 
   const item = sub.items[0];
+  console.log("[SubQty] Item fields:", JSON.stringify(item));
   // Add new item first, THEN remove old — Seal won't let you remove the last item
   const addBody = {
     id: parseInt(id),
@@ -3149,7 +3150,7 @@ function updateSubQty(id, qty) {
       variant_id: item.variant_id,
       quantity: qty,
       title: item.title,
-      sku: item.variant_sku || null,
+      sku: item.sku || item.variant_sku || "",
       price: item.original_price || item.price,
       taxable: item.taxable || 0,
       requires_shipping: item.requires_shipping || 1,
