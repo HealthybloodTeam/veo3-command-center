@@ -3017,8 +3017,25 @@ function hasActiveSub() {
 }
 
 function viewChat() {
+  // Show loading while checking subscription status
+  if (state.subs === null && state.email) {
+    if (!state.subsLoading) loadSubs();
+    return `
+      <div class="cora-header">
+        <div class="cora-avatar">C</div>
+        <div class="cora-info">
+          <div class="cora-name">Cora</div>
+          <div class="cora-status"><span class="dot"></span>Your wellness coach</div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;gap:12px;">
+        <div class="spinner"></div>
+        <p style="color:var(--text-muted);font-size:14px;">Checking your subscription…</p>
+      </div>
+    `;
+  }
   // Gate Cora behind an active subscription
-  if (state.subs !== null && !hasActiveSub()) {
+  if (hasActiveSub() === false) {
     return `
       <div class="cora-header">
         <div class="cora-avatar">C</div>
