@@ -3131,10 +3131,23 @@ function renderSubsContent() {
   return state.subs.map(sub => renderSubCard(sub)).join("");
 }
 // Get all billing attempts across all subs, sorted newest first
+// Includes the initial Shopify order (order_placed) which isn't in billing_attempts
 function getAllBillingAttempts() {
   if (!state.subs) return [];
   const all = [];
   for (const sub of state.subs) {
+    // Add the initial order as the first "attempt"
+    if (sub.order_placed) {
+      all.push({
+        date: sub.order_placed,
+        status: "completed",
+        completed_at: sub.order_placed,
+        _subId: sub.id,
+        _productName: sub.items?.[0]?.title || "HealthyBlood",
+        _totalValue: sub.total_value,
+        _isInitialOrder: true,
+      });
+    }
     for (const a of (sub.billing_attempts || [])) {
       all.push({ ...a, _subId: sub.id, _productName: sub.items?.[0]?.title || "HealthyBlood", _totalValue: sub.total_value });
     }
@@ -3357,6 +3370,7 @@ function renderSubCard(sub) {
   const productName = sub.items?.[0]?.title || "HealthyBlood Cholesterol Cleanse";
   const { count: intervalCount, unit: intervalUnit } = parseInterval(sub.delivery_interval || sub.billing_interval);
   const qty = sub.items?.[0]?.quantity || 1;
+  const packSize = getPackageSize(productName, qty);
   const currentFreq = `${intervalCount}_${intervalUnit}`;
 
   // Next billing: find the earliest upcoming billing attempt
@@ -3443,13 +3457,13 @@ function renderSubCard(sub) {
             <button class="btn small" onclick="subAction('${sub.id}','resume')">Resume</button>
             <button class="btn small danger" onclick="startCancelFlow('${sub.id}')">Cancel</button>
           ` : `
-            <button class="btn small ghost" onclick="startSkipFlow('${sub.id}', ${nextBillingAttemptId || 'null'})">Skip Next</button>
-            <button class="btn small ghost" onclick="startPauseFlow('${sub.id}', ${qty})">Pause</button>
+            <button class="btn small ghost" onclick="startSkipFlow('${sub.id}', ${nextBillingAttemptId || 'null'}, ${packSize})">Skip Next</button>
+            <button class="btn small ghost" onclick="startPauseFlow('${sub.id}', ${packSize})">Pause</button>
           `}
         </div>
-        ${String(state.skipFlowId) === String(sub.id) ? renderSkipFlow(sub.id, nextBillingAttemptId, nextCharge) : ""}
-        ${String(state.pauseFlowId) === String(sub.id) ? renderPauseFlow(sub.id, qty) : ""}
-        ${showCancelFlow ? renderCancelFlow(sub.id, qty) : ""}
+        ${String(state.skipFlowId) === String(sub.id) ? renderSkipFlow(sub.id, nextBillingAttemptId, nextCharge, packSize) : ""}
+        ${String(state.pauseFlowId) === String(sub.id) ? renderPauseFlow(sub.id, packSize) : ""}
+        ${showCancelFlow ? renderCancelFlow(sub.id, packSize) : ""}
       ` : `
         <div style="text-align:center;padding:16px 0">
           <p style="color:var(--text-muted);font-size:14px;margin-bottom:12px">Miss your daily HealthyBlood routine?</p>
@@ -3462,32 +3476,47 @@ function renderSubCard(sub) {
 }
 
 // Detect package: qty 5 = Buy 3 Get 2 Free, qty 3 = Buy 2 Get 1 Free, qty 1 = Buy 1
-function getSuggestedInterval(qty) {
-  if (qty >= 5) return { months: 5, label: "every 5 months", package: "Buy 3 Get 2 Free" };
-  if (qty >= 3) return { months: 3, label: "every 3 months", package: "Buy 2 Get 1 Free" };
+// Detect package size from product title OR quantity
+// Seal stores bundles as qty 1 with title like "Buy 2 Get 1 Free"
+function getPackageSize(title, qty) {
+  const t = (title || "").toLowerCase();
+  if (t.includes("buy 3 get 2") || t.includes("5 pack") || qty >= 5) return 5;
+  if (t.includes("buy 2 get 1") || t.includes("3 pack") || qty >= 3) return 3;
+  return 1;
+}
+
+function getSuggestedInterval(packSize) {
+  if (packSize >= 5) return { months: 5, label: "every 5 months", package: "Buy 3 Get 2 Free" };
+  if (packSize >= 3) return { months: 3, label: "every 3 months", package: "Buy 2 Get 1 Free" };
   return { months: 3, label: "every 3 months", package: null };
 }
 
-function renderSkipFlow(subId, billingAttemptId, nextDate) {
+function renderSkipFlow(subId, billingAttemptId, nextDate, packSize) {
+  const isMultiPack = packSize >= 3;
+  const suggest = getSuggestedInterval(packSize);
   return `
-    <div class="cancel-flow" style="border-color:rgba(74, 222, 128, 0.2)">
+    <div class="cancel-flow" style="border-color:rgba(251,191,36,0.3)">
       <h3>Skip your next delivery?</h3>
-      <p>Your next delivery${nextDate ? ` on <strong>${formatDate(nextDate)}</strong>` : ""} will be skipped. You'll still keep full access to Cora, your recipes, and habit tracking.</p>
+      <p>If you skip${nextDate ? ` your <strong>${formatDate(nextDate)}</strong> delivery` : ""}, you'll lose access to <strong>Cora, your personal wellness coach</strong>, your recipes, and habit tracking until your next delivery arrives.</p>
       <div class="save-offer">
         <strong>83% of users who follow Cora's advice see healthy numbers within 6 months</strong>
-        <p>Consistency matters. Make sure you still have enough HealthyBlood to take your daily 2ml dose without running out.</p>
+        ${isMultiPack
+          ? `<p>Instead of skipping, what if we space out your deliveries to ${suggest.label}? You keep Cora, your progress, and your loyalty streak.</p>`
+          : `<p>You can also adjust your delivery frequency above if shipments are coming too often.</p>`
+        }
       </div>
       <div class="cancel-actions">
-        <button class="btn full" onclick="confirmSkip('${subId}', ${billingAttemptId})">Yes, skip this delivery</button>
-        <button class="btn full ghost" onclick="state.skipFlowId=null; render();">Never mind, keep it</button>
+        ${isMultiPack ? `<button class="btn full" onclick="updateSubFrequency('${subId}','${suggest.months}_month'); state.skipFlowId=null;">Switch to ${suggest.label}</button>` : ""}
+        <button class="btn full ghost" onclick="state.skipFlowId=null; render();">Never mind, keep my delivery</button>
+        <button class="btn full" style="margin-top:8px;opacity:0.6;font-size:13px;background:var(--bg);border:1px solid var(--border-soft);color:var(--text-muted)" onclick="confirmSkip('${subId}', ${billingAttemptId})">Skip anyway</button>
       </div>
     </div>
   `;
 }
 
-function renderPauseFlow(subId, qty) {
-  const isMultiPack = qty >= 3;
-  const suggest = getSuggestedInterval(qty);
+function renderPauseFlow(subId, packSize) {
+  const isMultiPack = packSize >= 3;
+  const suggest = getSuggestedInterval(packSize);
   return `
     <div class="cancel-flow" style="border-color:rgba(251,191,36,0.3)">
       <h3>Are you sure?</h3>
@@ -3508,9 +3537,9 @@ function renderPauseFlow(subId, qty) {
   `;
 }
 
-function renderCancelFlow(subId, qty) {
-  const isMultiPack = qty >= 3;
-  const suggest = getSuggestedInterval(qty);
+function renderCancelFlow(subId, packSize) {
+  const isMultiPack = packSize >= 3;
+  const suggest = getSuggestedInterval(packSize);
   return `
     <div class="cancel-flow">
       <h3>We'd hate to see you go</h3>
@@ -3531,7 +3560,7 @@ function renderCancelFlow(subId, qty) {
   `;
 }
 
-function startSkipFlow(id, billingAttemptId) {
+function startSkipFlow(id, billingAttemptId, packSize) {
   if (!billingAttemptId || billingAttemptId === 'null') {
     state.banner = { type: "error", msg: "No upcoming delivery to skip." };
     render();
@@ -3539,14 +3568,16 @@ function startSkipFlow(id, billingAttemptId) {
     return;
   }
   state.skipFlowId = id;
+  state.skipPackSize = packSize || 1;
   render();
 }
 function confirmSkip(subId, billingAttemptId) {
   state.skipFlowId = null;
   skipNext(subId, billingAttemptId);
 }
-function startPauseFlow(id, qty) {
+function startPauseFlow(id, packSize) {
   state.pauseFlowId = id;
+  state.pausePackSize = packSize || 1;
   render();
 }
 function confirmPause(id) {
