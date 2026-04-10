@@ -3032,17 +3032,21 @@ function renderSkipFlow(subId, billingAttemptId, nextDate) {
 }
 
 function renderPauseFlow(subId, qty) {
+  const isMultiPack = qty >= 3;
   const suggest = getSuggestedInterval(qty);
   return `
     <div class="cancel-flow" style="border-color:rgba(251,191,36,0.3)">
       <h3>Are you sure?</h3>
-      <p>If you pause, you'll lose access to <strong>Cora, your personal wellness coach</strong>, along with your daily habit tracking and recipe library.</p>
+      <p>If you pause, you'll lose access to <strong>Cora, your personal wellness coach</strong>, along with your daily habit tracking, recipes, and lab history.</p>
       <div class="save-offer">
         <strong>83% of users who follow Cora's advice see healthy numbers within 6 months</strong>
-        <p>Instead of pausing, what if we space out your deliveries to ${suggest.label}? You keep Cora, your progress, and the price you locked in.</p>
+        ${isMultiPack
+          ? `<p>Instead of pausing, what if we space out your deliveries to ${suggest.label}? You keep Cora, your progress, and the price you locked in.</p>`
+          : `<p>You can also adjust your delivery frequency above if you have too much product on hand.</p>`
+        }
       </div>
       <div class="cancel-actions">
-        <button class="btn full" onclick="updateSubFrequency('${subId}','${suggest.months}_month'); state.pauseFlowId=null;">Switch to ${suggest.label}</button>
+        ${isMultiPack ? `<button class="btn full" onclick="updateSubFrequency('${subId}','${suggest.months}_month'); state.pauseFlowId=null;">Switch to ${suggest.label}</button>` : ""}
         <button class="btn full ghost" onclick="state.pauseFlowId=null; render();">Never mind, keep everything</button>
         <button class="btn full" style="margin-top:8px;opacity:0.6;font-size:13px;background:var(--bg);border:1px solid var(--border-soft);color:var(--text-muted)" onclick="confirmPause('${subId}')">Pause anyway</button>
       </div>
@@ -3051,6 +3055,7 @@ function renderPauseFlow(subId, qty) {
 }
 
 function renderCancelFlow(subId, qty) {
+  const isMultiPack = qty >= 3;
   const suggest = getSuggestedInterval(qty);
   return `
     <div class="cancel-flow">
@@ -3058,10 +3063,13 @@ function renderCancelFlow(subId, qty) {
       <p>Cancelling means you'll lose access to <strong>Cora, your personal wellness coach</strong>, all your recipes, habit streaks, and lab history.</p>
       <div class="save-offer">
         <strong>83% of users who follow Cora's advice see healthy numbers within 6 months</strong>
-        <p>What if we spaced your deliveries to ${suggest.label} instead? You keep everything and save by ordering less often.</p>
+        ${isMultiPack
+          ? `<p>What if we spaced your deliveries to ${suggest.label} instead? You keep everything and save by ordering less often.</p>`
+          : `<p>You can also adjust your delivery frequency if shipments are coming too often.</p>`
+        }
       </div>
       <div class="cancel-actions">
-        <button class="btn full" onclick="updateSubFrequency('${subId}','${suggest.months}_month'); state.cancelFlowId=null;">Switch to ${suggest.label}</button>
+        ${isMultiPack ? `<button class="btn full" onclick="updateSubFrequency('${subId}','${suggest.months}_month'); state.cancelFlowId=null;">Switch to ${suggest.label}</button>` : ""}
         <button class="btn full ghost" onclick="state.cancelFlowId=null; render();">Never mind, keep my subscription</button>
         <button class="btn full" style="margin-top:8px;opacity:0.6;font-size:13px;background:var(--bg);border:1px solid var(--border-soft);color:var(--text-muted)" onclick="confirmCancel('${subId}')">I still want to cancel</button>
       </div>
