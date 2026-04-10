@@ -285,20 +285,44 @@ app.get("/api/hb/subscriptions", async (req, res) => {
       headers: { "X-Seal-Token": SEAL_API_TOKEN, "Content-Type": "application/json" },
     });
     const data = await r.json();
-    console.log("[Seal] Status:", r.status, "| Keys:", Object.keys(data), "| Type:", Array.isArray(data) ? "array" : typeof data);
+    console.log("[Seal] Status:", r.status, "| Top keys:", Object.keys(data), "| Type:", Array.isArray(data) ? "array" : typeof data);
 
-    // Normalize — Seal may return array directly, or wrap in an object
+    // Debug: log the full payload structure so we can see exactly what Seal returns
+    if (data.payload !== undefined) {
+      const p = data.payload;
+      console.log("[Seal] payload type:", Array.isArray(p) ? "array" : typeof p,
+        Array.isArray(p) ? `(${p.length} items)` : p && typeof p === "object" ? `keys: ${Object.keys(p).join(", ")}` : String(p));
+      // If payload is an object, log deeper
+      if (p && typeof p === "object" && !Array.isArray(p)) {
+        for (const k of Object.keys(p)) {
+          const v = p[k];
+          console.log(`[Seal]   payload.${k}:`, Array.isArray(v) ? `array(${v.length})` : typeof v, Array.isArray(v) && v.length > 0 ? `first keys: ${Object.keys(v[0]).join(",")}` : "");
+        }
+      }
+    }
+
+    // Normalize — handle every possible shape Seal might return
     let subs = [];
     if (Array.isArray(data)) {
       subs = data;
-    } else if (data.payload && Array.isArray(data.payload)) {
-      subs = data.payload;
+    } else if (data.payload) {
+      const p = data.payload;
+      if (Array.isArray(p)) {
+        subs = p;
+      } else if (typeof p === "object") {
+        // payload might be { subscriptions: [...] } or contain the subs under some key
+        subs = p.subscriptions || p.data || p.results || (p.items && Array.isArray(p.items) ? p.items : []);
+        // If payload itself looks like a single subscription (has id + status), wrap it
+        if (subs.length === 0 && p.id && p.status) {
+          subs = [p];
+        }
+      }
     } else if (data.subscriptions) {
       subs = data.subscriptions;
     } else if (data.data) {
       subs = data.data;
     }
-    console.log("[Seal] Parsed", subs.length, "subscriptions");
+    console.log("[Seal] Final parsed:", subs.length, "subscriptions");
     if (subs.length > 0) console.log("[Seal] First sub keys:", Object.keys(subs[0]).join(", "));
 
     res.json({ subscriptions: subs });
