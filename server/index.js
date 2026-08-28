@@ -27,6 +27,18 @@ async function saveLoyaltyLedger() {
   await fs.promises.writeFile(temporary, JSON.stringify(loyaltyLedger, null, 2));
   await fs.promises.rename(temporary, loyaltyFile);
 }
+function rewardNotes(subscription) {
+  return Object.fromEntries((subscription.note_attributes || []).map(a => [String(a.name || a.key), String(a.value || "")]));
+}
+async function saveRewardNotes(subscription, updates, headers) {
+  const names = new Set(Object.keys(updates));
+  const preserved = (subscription.note_attributes || []).filter(a => !names.has(String(a.name || a.key)));
+  const note_attributes = [...preserved, ...Object.entries(updates).filter(([,v]) => v !== null).map(([name,value]) => ({ name, value:String(value) }))];
+  const response = await fetch(`${SEAL_BASE}/subscription`, { method:"PUT", headers, body:JSON.stringify({ id:Number(subscription.id), action:"edit", edit:{ note_attributes } }) });
+  const data = await response.json();
+  if (!response.ok || data.success === false) throw new Error(data.error || "Unable to save reward claim state in Seal");
+  return note_attributes;
+}
 
 app.use(cors());
 app.use(express.json({ limit: "50mb" }));
@@ -350,10 +362,10 @@ app.get("/api/hb/subscriptions", async (req, res) => {
         const detailResponse = await fetch(`${SEAL_BASE}/subscription?id=${encodeURIComponent(sub.id)}`, { headers: sealHeaders });
         const detailData = await detailResponse.json();
         const detail = detailData.payload || detailData;
-        const entry = loyaltyLedger[String(sub.id)] || {};
-        const tier = Number(entry.tier || 0), base = Number(entry.basePrice || 0);
+        const entry = loyaltyLedger[String(sub.id)] || {}, notes = rewardNotes(detail);
+        const tier = Number(notes.hb_loyalty_tier || entry.tier || 0), base = Number(notes.hb_loyalty_base || entry.basePrice || 0);
         const current = Number((detail.items || sub.items || [])[0]?.price || 0), expected = Number((base * (1 - tier / 100)).toFixed(2));
-        return { ...sub, ...detail, loyalty_applied_tier: tier, loyalty_base_price: base, loyalty_price_valid: tier > 0 && base > 0 && Math.abs(current - expected) < 0.005, vacation_entry_months: entry.vacationEntries || [], blood_test_claimed: Boolean(entry.bloodTestClaimedAt) };
+        return { ...sub, ...detail, loyalty_applied_tier: tier, loyalty_base_price: base, loyalty_price_valid: tier > 0 && base > 0 && Math.abs(current - expected) < 0.005, vacation_entry_months: String(notes.hb_vacation_entries || (entry.vacationEntries || []).join(",")).split(",").filter(Boolean), blood_test_claimed: notes.hb_blood_test_claimed === "true" || Boolean(entry.bloodTestClaimedAt) };
       } catch (_) { return sub; }
     }));
     res.json({ subscriptions: detailedSubs });
@@ -373,8 +385,11 @@ app.post("/api/hb/reward-claim", async (req, res) => {
     const sr = await fetch(`${SEAL_BASE}/subscriptions?query=${encodeURIComponent(email)}&with-items=true&with-billing-attempts=true`, { headers });
     const sd = await sr.json();
     const list = sd.payload?.subscriptions || sd.payload || sd.subscriptions || [];
-    const sub = (Array.isArray(list) ? list : [list]).find(s => String(s.id) === String(subscriptionId));
-    if (!sub || !["active", "paused"].includes(String(sub.status || "").toLowerCase())) return res.status(404).json({ error: "Eligible subscription not found" });
+    const ownedSub = (Array.isArray(list) ? list : [list]).find(s => String(s.id) === String(subscriptionId));
+    if (!ownedSub || !["active", "paused"].includes(String(ownedSub.status || "").toLowerCase())) return res.status(404).json({ error: "Eligible subscription not found" });
+    const dr = await fetch(`${SEAL_BASE}/subscription?id=${encodeURIComponent(subscriptionId)}`, { headers });
+    const dd = await dr.json();
+    const sub = { ...ownedSub, ...(dd.payload || dd) }, notes = rewardNotes(dd.payload || dd);
     const renewals = (sub.billing_attempts || []).filter(a => a.completed_at || ["completed","success","succeeded","paid"].includes(String(a.status || "").toLowerCase())).length;
     const orders = (sub.order_placed ? 1 : 0) + renewals;
     const months = sub.order_placed ? Math.floor((Date.now() - new Date(sub.order_placed).getTime()) / 2629800000) : 0;
@@ -384,12 +399,15 @@ app.post("/api/hb/reward-claim", async (req, res) => {
       if (orders < 2) return res.status(403).json({ error: "Complete two orders to unlock monthly entries" });
       if (now.getUTCDate() < 8) return res.status(403).json({ error: "Monthly entry claiming opens on the 8th" });
       const monthsClaimed = new Set(entry.vacationEntries || []);
+      String(notes.hb_vacation_entries || "").split(",").filter(Boolean).forEach(m => monthsClaimed.add(m));
       if (monthsClaimed.has(monthKey)) return res.json({ success: true, alreadyClaimed: true, reward, monthKey });
       monthsClaimed.add(monthKey); entry.vacationEntries = [...monthsClaimed];
+      await saveRewardNotes(sub, { hb_vacation_entries: entry.vacationEntries.join(",") }, headers);
     } else {
       if (months < 12) return res.status(403).json({ error: "Twelve active months are required" });
-      if (entry.bloodTestClaimedAt) return res.json({ success: true, alreadyClaimed: true, reward });
+      if (entry.bloodTestClaimedAt || notes.hb_blood_test_claimed === "true") return res.json({ success: true, alreadyClaimed: true, reward });
       entry.bloodTestClaimedAt = new Date().toISOString();
+      await saveRewardNotes(sub, { hb_blood_test_claimed: "true" }, headers);
     }
     loyaltyLedger[key] = { ...entry, updatedAt: new Date().toISOString() };
     await saveLoyaltyLedger();
@@ -528,7 +546,8 @@ app.post("/api/hb/subscription/:id/:action", async (req, res) => {
       const sr = await fetch(`${SEAL_BASE}/subscription?id=${encodeURIComponent(id)}`, { headers: sealHeaders });
       const sd = await sr.json();
       const sub = sd.payload || sd;
-      const base = loyaltyLedger[String(id)]?.basePrice || String(sub.admin_note || "").match(/Loyalty base:([0-9.]+)/i)?.[1];
+      const notes = rewardNotes(sub);
+      const base = notes.hb_loyalty_base || loyaltyLedger[String(id)]?.basePrice;
       const item = sub.items?.[0];
       if (base && item) {
         const restored = { product_id:String(item.product_id), variant_id:String(item.variant_id), quantity:String(item.quantity || 1), title:item.title, sku:String(item.sku || item.variant_id), price:Number(base), taxable:item.taxable ?? 1, requires_shipping:item.requires_shipping ?? 1, one_time:0 };
@@ -537,6 +556,7 @@ app.post("/api/hb/subscription/:id/:action", async (req, res) => {
       }
       delete loyaltyLedger[String(id)];
       await saveLoyaltyLedger();
+      await saveRewardNotes(sub, { hb_loyalty_base:null, hb_loyalty_tier:null, hb_vacation_entries:null, hb_blood_test_claimed:null }, sealHeaders);
     }
     const r = await fetch(`${SEAL_BASE}/subscription`, {
       method: "PUT",
@@ -595,13 +615,29 @@ app.post("/api/hb/loyalty-reward", async (req, res) => {
     const discountPercent = completedOrders >= 6 ? 17 : 10;
 
     const item = sub.items[0];
-    const ledgerKey = String(subId), existing = loyaltyLedger[ledgerKey] || {};
+    const ledgerKey = String(subId), existing = loyaltyLedger[ledgerKey] || {}, notes = rewardNotes(sub);
+    if (!notes.hb_loyalty_tier && !existing.tier && completedOrders >= 6 && /bergamot.*1\s*pack/i.test(String(item.title || "")) && Number(item.price) < 20) {
+      await saveRewardNotes(sub, { hb_loyalty_tier: 17 }, sealHeaders);
+      loyaltyLedger[ledgerKey] = { tier:17, status:"active", migrated:true, updatedAt:new Date().toISOString() };
+      await saveLoyaltyLedger();
+      return res.json({ success:true, alreadyApplied:true, discountPercent:17, newPrice:Number(item.price), migrated:true });
+    }
     const quantity = Math.max(1, Number(item.quantity || 1));
     const candidates = [existing.basePrice, item.original_price, ownedSub.items?.[0]?.original_price, item.price, ownedSub.items?.[0]?.price, sub.total_value && Number(sub.total_value) / quantity, ownedSub.total_value && Number(ownedSub.total_value) / quantity, ...(sub.billing_attempts || []).flatMap(a => [a.total_value, a.amount, a.price, a.order_total].map(v => v && Number(v) / quantity))].map(Number).filter(v => Number.isFinite(v) && v > 0);
     const originalPrice = Math.max(...candidates);
     if (!Number.isFinite(originalPrice)) return res.status(409).json({ error: "Unable to recover the original subscription price. No price change was made." });
     const discountedPrice = (originalPrice * (1 - discountPercent / 100)).toFixed(2);
-    if (Number(existing.tier) === discountPercent && existing.status === "active" && Math.abs(Number(item.price) - Number(discountedPrice)) < 0.005) return res.json({ success: true, alreadyApplied: true, discountPercent, newPrice: Number(item.price), originalPrice });
+    if (Number(notes.hb_loyalty_tier) === discountPercent) return res.json({ success: true, alreadyApplied: true, discountPercent, newPrice: Number(item.price), originalPrice });
+    if (Number(existing.tier) === discountPercent && existing.status === "active") {
+      await saveRewardNotes(sub, { hb_loyalty_base: existing.basePrice || null, hb_loyalty_tier: discountPercent }, sealHeaders);
+      return res.json({ success: true, alreadyApplied: true, discountPercent, newPrice: Number(item.price), originalPrice });
+    }
+    if (Number(item.price) <= Number(discountedPrice) + 0.005) {
+      await saveRewardNotes(sub, { hb_loyalty_base: originalPrice, hb_loyalty_tier: discountPercent }, sealHeaders);
+      loyaltyLedger[ledgerKey] = { basePrice:originalPrice, tier:discountPercent, targetPrice:Number(discountedPrice), status:"active", updatedAt:new Date().toISOString() };
+      await saveLoyaltyLedger();
+      return res.json({ success:true, alreadyApplied:true, discountPercent, newPrice:Number(item.price), originalPrice });
+    }
     loyaltyLedger[ledgerKey] = { basePrice: originalPrice, tier: discountPercent, targetPrice: Number(discountedPrice), status: "pending", updatedAt: new Date().toISOString() };
     await saveLoyaltyLedger();
     console.log(`[Loyalty] Item: ${item.title} | Original: $${originalPrice} → Discounted: $${discountedPrice} (${discountPercent}% off)`);
@@ -635,12 +671,7 @@ app.post("/api/hb/loyalty-reward", async (req, res) => {
     const d2 = await r2.json();
     console.log("[Loyalty] remove_items response:", r2.status, JSON.stringify(d2));
 
-    // Save the original base price so upgrades and cancellation resets never compound.
-    const noteResponse = await fetch(`${SEAL_BASE}/subscription`, {
-      method: "PUT", headers: sealHeaders,
-      body: JSON.stringify({ id: subId, action: "edit", edit: { admin_note: `Loyalty base:${originalPrice}; tier:${discountPercent}; updated:${new Date().toISOString().split("T")[0]}` } }),
-    });
-    console.log("[Loyalty] admin_note response:", noteResponse.status);
+    await saveRewardNotes(sub, { hb_loyalty_base: originalPrice, hb_loyalty_tier: discountPercent }, sealHeaders);
     loyaltyLedger[ledgerKey] = { ...loyaltyLedger[ledgerKey], status: "active", updatedAt: new Date().toISOString() };
     await saveLoyaltyLedger();
 
