@@ -2238,21 +2238,33 @@ window.addEventListener("beforeinstallprompt", (e) => {
 });
 
 // === API helpers ===
+async function readApiResponse(r) {
+  const type = r.headers.get("content-type") || "";
+  if (!type.includes("application/json")) throw new Error("The subscription service is restarting. Please try again in a moment.");
+  const data = await r.json();
+  if (!r.ok) throw new Error(data.error || data.message || `Error ${r.status}`);
+  return data;
+}
 async function apiPost(path, body) {
   const r = await fetch(API + path, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
-  const data = await r.json();
-  if (!r.ok) throw new Error(data.error || data.message || `Error ${r.status}`);
-  return data;
+  return readApiResponse(r);
 }
 async function apiGet(path) {
-  const r = await fetch(API + path);
-  const data = await r.json();
-  if (!r.ok) throw new Error(data.error || data.message || `Error ${r.status}`);
-  return data;
+  let lastError;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const r = await fetch(API + path, { cache: "no-store" });
+      return await readApiResponse(r);
+    } catch (error) {
+      lastError = error;
+      if (attempt === 0) await new Promise(resolve => setTimeout(resolve, 1500));
+    }
+  }
+  throw lastError;
 }
 
 // === Cora Suggests logic ===
