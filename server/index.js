@@ -489,7 +489,7 @@ app.post("/api/hb/subscription/:id/:action", async (req, res) => {
 });
 
 // ==========================================
-// Loyalty Reward — 15% at four orders, upgraded to 25% at six orders.
+// Loyalty Reward — extra 10% at four orders, upgraded to extra 17% at six orders.
 // Applies by editing item price directly in Seal (remove old, add at discounted price)
 // ==========================================
 app.post("/api/hb/loyalty-reward", async (req, res) => {
@@ -522,7 +522,7 @@ app.post("/api/hb/loyalty-reward", async (req, res) => {
     const completedOrders = (sub.order_placed ? 1 : 0) + completedRenewals;
     if (completedOrders < 4) return res.status(403).json({ error: `Complete ${4 - completedOrders} more order${4 - completedOrders === 1 ? "" : "s"} to unlock this reward` });
 
-    const discountPercent = completedOrders >= 6 ? 25 : 15;
+    const discountPercent = completedOrders >= 6 ? 17 : 10;
 
     const item = sub.items[0];
     const savedBase = String(sub.admin_note || "").match(/Loyalty base:([0-9.]+)/i)?.[1];
