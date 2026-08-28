@@ -3553,7 +3553,7 @@ function renderCancelFlow(sub, billingAttemptId, nextCharge, packSize) {
       <h3>What can we fix for you?</h3>
       <p>Choose the main reason, and we’ll tailor the best option.</p>
       <div class="cancel-reasons">${[['too_much','I have too many bottles'],['price','It costs too much right now'],['results','I’m not seeing the results yet'],['break','I need a break'],['payment','I need to update my payment'],['other','Something else']].map(([v,l])=>`<label class="cancel-reason"><input type="radio" name="hb-cancel-reason" value="${v}" ${state.cancelReason===v?'checked':''} onchange="state.cancelReason='${v}'">${l}</label>`).join('')}</div>
-      ${state.cancelReason === 'too_much' ? `<div class="save-offer"><strong>Let’s match your delivery to your supply</strong><p>${isMultiPack?`Your package should last about ${packSize} months. Move the next delivery to when you are more likely to run out.`:'Choose the date you expect to need your next bottle.'}</p><input class="cancel-date" type="date" id="hb-cancel-date" min="${minDate}" value="${suggestedDate}"><button class="btn full" onclick="changeNextDelivery('${subId}',${billingAttemptId || 'null'},document.getElementById('hb-cancel-date').value)">Use this date and keep my plan</button></div>` : state.cancelReason === 'break' ? `<div class="save-offer"><strong>Take breathing room without losing everything</strong><p>Move your next order back instead of resetting your rewards and annual blood-panel progress.</p><input class="cancel-date" type="date" id="hb-cancel-date" min="${minDate}" value="${suggestedDate}"><button class="btn full" onclick="changeNextDelivery('${subId}',${billingAttemptId || 'null'},document.getElementById('hb-cancel-date').value)">Move my order and stay</button></div>` : state.cancelReason === 'price' ? `<div class="save-offer"><strong>Lower how often you are charged</strong><p>Space deliveries farther apart and keep your subscriber pricing and benefits.</p><button class="btn full" onclick="updateSubFrequency('${subId}','${suggest.months}_month'); closeCancelFlow();">Switch to ${suggest.label}</button></div>` : state.cancelReason === 'results' ? `<div class="save-offer"><strong>Consistency is where the value compounds</strong><p>Keep Cora, recipes, daily tracking, and your blood-panel milestone while giving your routine more time.</p></div>` : state.cancelReason === 'payment' ? `<div class="save-offer"><strong>Your subscription does not need to end</strong><p>Update your payment method securely through Shopify and keep every benefit.</p></div>` : ''}
+      ${state.cancelReason === 'too_much' ? `<div class="save-offer"><strong>Have too many bottles?</strong><p>Update your delivery to the date when you’ll actually need more. You keep your subscription and avoid receiving product too early.</p><input class="cancel-date" type="date" id="hb-cancel-date" min="${minDate}" value="${suggestedDate}"><button class="btn full" onclick="changeNextDelivery('${subId}',${billingAttemptId || 'null'},document.getElementById('hb-cancel-date').value)">Update to when I’ll need more</button></div>` : state.cancelReason === 'break' ? `<div class="save-offer"><strong>Take breathing room without losing everything</strong><p>Move your next order back instead of resetting your rewards and annual blood-panel progress.</p><input class="cancel-date" type="date" id="hb-cancel-date" min="${minDate}" value="${suggestedDate}"><button class="btn full" onclick="changeNextDelivery('${subId}',${billingAttemptId || 'null'},document.getElementById('hb-cancel-date').value)">Move my order and stay</button></div>` : state.cancelReason === 'price' ? `<div class="save-offer"><strong>Lower how often you are charged</strong><p>Space deliveries farther apart and keep your subscriber pricing and benefits.</p><button class="btn full" onclick="updateSubFrequency('${subId}','${suggest.months}_month'); closeCancelFlow();">Switch to ${suggest.label}</button></div>` : state.cancelReason === 'results' ? `<div class="save-offer"><strong>Consistency is where the value compounds</strong><p>Keep Cora, recipes, daily tracking, and your blood-panel milestone while giving your routine more time.</p></div>` : state.cancelReason === 'payment' ? `<div class="save-offer"><strong>Your subscription does not need to end</strong><p>Update your payment method securely through Shopify and keep every benefit.</p></div>` : ''}
       <div class="cancel-actions"><button class="btn full" onclick="continueCancelReason()">Continue</button><button class="btn full ghost" onclick="closeCancelFlow()">Keep my subscription</button></div>
     </div>`;
   if (step === 3) return `
@@ -3566,10 +3566,10 @@ function renderCancelFlow(sub, billingAttemptId, nextCharge, packSize) {
     </div>`;
   if (step === 4) return `
     <div class="cancel-flow">
-      <h3>Our strongest offer to keep you</h3>
-      <p>Stay today and lock in an additional <strong>10% off your current subscription rate for life</strong>. If you have already earned 17%, your higher rate stays protected.</p>
-      ${state.cancelReason==='too_much'?`<div class="save-offer"><strong>Get the discount and fix your delivery timing</strong><p>Choose when you expect to need more. We’ll apply your lifetime loyalty rate and move the next delivery together.</p><input class="cancel-date" type="date" id="hb-final-date" min="${minDate}" value="${suggestedDate}"><button class="btn full" onclick="claimRetentionOffer('${subId}',${billingAttemptId || 'null'},document.getElementById('hb-final-date').value)">Apply 10% off and change my date</button></div>`:`<div class="save-offer"><strong>Keep every benefit and save for life</strong><p>Your vacation entries, mystery gifts, Cora, recipes, tracker, loyalty progress, and $300 annual blood panel remain active.</p><button class="btn full" onclick="claimRetentionOffer('${subId}')">Lock in my 10% loyalty rate</button></div><div class="save-offer"><strong>Or choose exactly when you need your next order</strong><input class="cancel-date" type="date" id="hb-final-date" min="${minDate}" value="${suggestedDate}"><button class="btn full ghost" onclick="changeNextDelivery('${subId}',${billingAttemptId || 'null'},document.getElementById('hb-final-date').value)">Change my date and stay</button></div>`}
-      <div class="cancel-actions"><button class="btn full ghost" onclick="closeCancelFlow()">Keep my current subscription</button><button class="btn full" style="opacity:.65;font-size:13px;background:var(--bg);border:1px solid var(--border-soft);color:var(--text-muted)" onclick="setCancelStep(5)">No thanks, continue to cancellation</button></div>
+      <h3>Okay, we lied. This is our last offer.</h3>
+      <p>Change your delivery date, get an additional <strong>10% off your current subscription rate for life</strong>, and receive <strong>one free bottle of HealthyBlood</strong>. If you already earned 17%, your higher rate stays protected.</p>
+      <div class="save-offer"><strong>Choose when you’ll need more</strong><input class="cancel-date" type="date" id="hb-final-date" min="${minDate}" value="${suggestedDate}"></div>
+      <div class="cancel-actions"><button class="btn full" onclick="claimFinalRetentionDeal('${subId}',${billingAttemptId || 'null'},document.getElementById('hb-final-date').value)">Deal</button><button class="btn full ghost" onclick="setCancelStep(5)">No Deal</button></div>
     </div>`;
   return `
     <div class="cancel-flow">
@@ -3665,6 +3665,18 @@ function claimRetentionOffer(id, billingAttemptId=null, date=null) {
     .then(async d=>{ localStorage.setItem(`hb_loyalty_claim_${id}`,String(Math.max(10,Number(d.discountPercent||10)))); if(date) await apiPost(`/hb/subscription/${id}/reschedule`,{billingAttemptId,date}); closeCancelFlow(); state.banner={type:"success",msg:date?"Your lifetime rate is protected and your next delivery date has been changed.":d.alreadyApplied?"Your lifetime loyalty rate is already protected.":"Your additional 10%-off-for-life rate is now locked in."}; state.actionBusy=null; loadSubs(); })
     .catch(e=>{state.banner={type:"error",msg:e.message};state.actionBusy=null;render();});
 }
+async function claimFinalRetentionDeal(id, billingAttemptId, date) {
+  if (!date) { state.banner={type:"error",msg:"Choose the date when you’ll need more."}; render(); return; }
+  state.actionBusy=id; state.banner=null; render();
+  try {
+    const discountResponse=await fetch(API+"/hb/loyalty-reward",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({subscriptionId:Number(id),email:state.email,retentionOffer:true})});
+    const discount=await discountResponse.json();
+    if(!discountResponse.ok||discount.error)throw new Error(discount.error||"We could not protect your lifetime rate.");
+    const deal=await apiPost("/hb/retention-final",{subscriptionId:Number(id),email:state.email,billingAttemptId,date});
+    localStorage.setItem(`hb_loyalty_claim_${id}`,String(Math.max(10,Number(discount.discountPercent||10))));
+    closeCancelFlow(); state.banner={type:"success",msg:deal.alreadyClaimed?"Your lifetime rate and delivery date are protected; your free bottle was already added.":"Deal accepted: lifetime savings, a new delivery date, and one free bottle are confirmed."}; state.actionBusy=null; loadSubs();
+  } catch(e) { state.banner={type:"error",msg:e.message||"We could not complete the deal. No additional attempt was made."}; state.actionBusy=null; render(); }
+}
 // Quantity change: Seal doesn't have a direct qty edit, so we remove + re-add the item
 // For now, show a banner explaining how to adjust quantity
 function updateSubQty(id, qty) {
@@ -3738,6 +3750,7 @@ window.guardCancelVideo = guardCancelVideo;
 window.completeCancelVideo = completeCancelVideo;
 window.changeNextDelivery = changeNextDelivery;
 window.claimRetentionOffer = claimRetentionOffer;
+window.claimFinalRetentionDeal = claimFinalRetentionDeal;
 window.updateSubFrequency = updateSubFrequency;
 window.updateSubQty = updateSubQty;
 window.skipNext = skipNext;

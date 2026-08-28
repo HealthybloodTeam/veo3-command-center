@@ -693,6 +693,41 @@ app.post("/api/hb/loyalty-reward", async (req, res) => {
   }
 });
 
+app.post("/api/hb/retention-final", async (req, res) => {
+  try {
+    if (!SEAL_API_TOKEN) return res.status(500).json({ error: "SEAL_API_TOKEN not configured" });
+    const subscriptionId = Number(req.body.subscriptionId), email = String(req.body.email || "").trim().toLowerCase(), date = String(req.body.date || "");
+    let billingAttemptId = req.body.billingAttemptId;
+    if (!subscriptionId || !email) return res.status(400).json({ error: "Subscription and customer email are required." });
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || new Date(`${date}T23:59:59Z`) <= new Date()) return res.status(400).json({ error: "Choose a valid future delivery date." });
+    const headers = { "X-Seal-Token": SEAL_API_TOKEN, "Content-Type": "application/json" };
+    const ownedResponse = await fetch(`${SEAL_BASE}/subscriptions?query=${encodeURIComponent(email)}&with-items=true&with-billing-attempts=true`, { headers });
+    const ownedData = await ownedResponse.json();
+    const ownedList = ownedData.payload?.subscriptions || ownedData.payload || ownedData.subscriptions || [];
+    const owned = (Array.isArray(ownedList) ? ownedList : [ownedList]).find(s => String(s.id) === String(subscriptionId) && String(s.email || "").trim().toLowerCase() === email);
+    if (!owned) return res.status(404).json({ error: "Eligible subscription not found." });
+    const detailResponse = await fetch(`${SEAL_BASE}/subscription?id=${encodeURIComponent(subscriptionId)}`, { headers });
+    const detailData = await detailResponse.json();
+    const sub = { ...owned, ...(detailData.payload || detailData) };
+    const attempts = (sub.billing_attempts || []).filter(a => !a.completed_at && !["completed","skipped","cancelled","canceled","refunded"].includes(String(a.status || "").toLowerCase())).sort((a,b) => new Date(a.date || a.billing_date || a.scheduled_at || 0) - new Date(b.date || b.billing_date || b.scheduled_at || 0));
+    if (!billingAttemptId) billingAttemptId = attempts[0]?.id;
+    if (!billingAttemptId) return res.status(409).json({ error: "We could not find the next scheduled delivery. Resume the subscription or contact support to set the date." });
+    const scheduleResponse = await fetch(`${SEAL_BASE}/subscription-billing-attempt`, { method:"PUT", headers, body:JSON.stringify({ id:Number(billingAttemptId), subscription_id:subscriptionId, date, time:"09:00", timezone:"+00:00", action:"reschedule", reset_schedule:"true" }) });
+    const scheduleData = await scheduleResponse.json();
+    if (!scheduleResponse.ok || scheduleData.success === false) return res.status(scheduleResponse.status || 502).json({ error: scheduleData.error || "Seal could not change the delivery date." });
+    const notes = rewardNotes(sub);
+    if (notes.hb_retention_free_bottle === "true") return res.json({ success:true, alreadyClaimed:true, reschedule:scheduleData.payload || scheduleData });
+    const item = sub.items?.find(i => !i.is_one_time_item) || sub.items?.[0];
+    if (!item) return res.status(409).json({ error: "The delivery date changed, but no eligible bottle was found for the free gift. Please contact support." });
+    const freeBottle = { product_id:String(item.product_id), variant_id:String(item.variant_id), quantity:"1", title:`Free ${item.title || "HealthyBlood bottle"}`, sku:String(item.sku || item.variant_sku || item.variant_id), price:0, taxable:item.taxable ?? 1, requires_shipping:item.requires_shipping ?? 1, one_time:1 };
+    const giftResponse = await fetch(`${SEAL_BASE}/subscription`, { method:"PUT", headers, body:JSON.stringify({ id:subscriptionId, action:"add_items", add_items:[freeBottle] }) });
+    const giftData = await giftResponse.json();
+    if (!giftResponse.ok || giftData.success === false) return res.status(giftResponse.status || 502).json({ error: giftData.error || "The delivery date changed, but the free bottle could not be added. Please contact support." });
+    await saveRewardNotes(sub, { hb_retention_free_bottle:"true" }, headers);
+    res.json({ success:true, reschedule:scheduleData.payload || scheduleData, gift:giftData.payload || giftData });
+  } catch (err) { res.status(500).json({ error: err.message || "Unable to complete the final retention deal." }); }
+});
+
 async function handleReschedule(req, res) {
   try {
     if (!SEAL_API_TOKEN) return res.status(500).json({ error: "SEAL_API_TOKEN not configured" });
