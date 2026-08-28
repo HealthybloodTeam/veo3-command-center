@@ -567,14 +567,23 @@ app.post("/api/hb/subscription/:id/:action", async (req, res) => {
       await saveLoyaltyLedger();
       await saveRewardNotes(sub, { hb_loyalty_base:null, hb_loyalty_tier:null, hb_vacation_entries:null, hb_blood_test_claimed:null, hb_exit_reason:exitReason || "unspecified", hb_exit_action:"cancel", hb_exit_recorded_at:new Date().toISOString() }, sealHeaders);
     }
-    if (action === "pause" && actionSub) await saveRewardNotes(actionSub, { hb_exit_reason:exitReason || "unspecified", hb_exit_action:"pause", hb_exit_recorded_at:new Date().toISOString() }, sealHeaders);
     const r = await fetch(`${SEAL_BASE}/subscription`, {
       method: "PUT",
       headers: { "X-Seal-Token": SEAL_API_TOKEN, "Content-Type": "application/json" },
       body: JSON.stringify({ id: parseInt(id), action }),
     });
-    const data = await r.json();
+    const responseText = await r.text();
+    let data;
+    try { data = responseText ? JSON.parse(responseText) : {}; }
+    catch (_) { data = { error: responseText || `Seal returned an invalid response (${r.status})` }; }
     console.log("[Seal] Action response:", r.status, data.success !== undefined ? `success=${data.success}` : "");
+    if (r.ok && data.success !== false && action === "pause" && actionSub) {
+      try {
+        await saveRewardNotes(actionSub, { hb_exit_reason:exitReason || "unspecified", hb_exit_action:"pause", hb_exit_recorded_at:new Date().toISOString() }, sealHeaders);
+      } catch (noteError) {
+        console.warn("[Seal] Subscription paused, but pause reason could not be recorded:", noteError.message);
+      }
+    }
     res.status(r.status).json(data);
   } catch (err) {
     console.error("[Seal] Action error:", err.message);
