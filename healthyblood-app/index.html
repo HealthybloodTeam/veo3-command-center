@@ -1633,19 +1633,20 @@
     transition: width 0.6s ease;
   }
   .loyalty-steps {
-    display: flex;
-    justify-content: space-between;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
     margin-bottom: 14px;
-    gap: 2px;
-    overflow-x: auto;
+    gap: 10px;
   }
   .loyalty-step {
     display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
-    flex: 1;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 10px;
     min-width: 0;
+    padding: 12px;
+    background: rgba(255,255,255,0.045);
+    border-radius: 13px;
   }
   .step-dot {
     width: 28px;
@@ -1677,11 +1678,19 @@
     border-color: var(--accent);
   }
   .step-label {
-    font-size: 9px;
+    font-size: 11px;
+    line-height: 1.35;
     color: var(--text-muted);
     font-weight: 500;
-    white-space: nowrap;
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
+  .loyalty-trip { position:relative; overflow:hidden; min-height:180px; margin:16px 0; border-radius:16px; background-size:cover; background-position:center; }
+  .loyalty-trip::after { content:""; position:absolute; inset:0; background:linear-gradient(90deg,rgba(1,28,18,.94),rgba(1,28,18,.3)); }
+  .loyalty-trip-copy { position:relative; z-index:1; width:62%; padding:20px; color:#fff; }
+  .loyalty-trip-copy strong { display:block; font-size:18px; line-height:1.2; margin-bottom:6px; }
+  .loyalty-trip-copy span { font-size:12px; line-height:1.45; }
+  @media(max-width:420px){.loyalty-card{padding:17px}.loyalty-steps{grid-template-columns:1fr}.loyalty-trip-copy{width:78%}}
   .loyalty-hint {
     text-align: center;
     font-size: 13px;
@@ -3203,11 +3212,17 @@ function loyaltyProgram(sub) {
   return { sub, active, orders, months, cadence: packageCadence(sub) };
 }
 
+function nextRewardDrawing() {
+  const now = new Date();
+  const drawing = new Date(now.getFullYear(), now.getMonth() + (now.getDate() >= 8 ? 1 : 0), 8, 12);
+  return drawing.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+}
+
 function renderLoyaltyTracker() {
   if (!state.subs) return "";
   const programs = state.subs.map(loyaltyProgram);
   const tile = (done, title, detail) => `<div class="loyalty-step ${done ? "done reward" : ""}"><div class="step-dot">${done ? "✓" : "○"}</div><div class="step-label"><strong>${title}</strong><br>${detail}</div></div>`;
-  return programs.map(p => `<div class="section" style="margin-top:8px;"><div class="loyalty-card ${p.orders >= 2 ? "unlocked" : ""}"><div class="loyalty-header"><div class="loyalty-icon">🎁</div><div><div class="loyalty-title">HealthyBlood Rewards</div><div class="loyalty-sub">${esc(p.sub.items?.[0]?.title || "Subscription")} · ${p.active ? `${p.orders} completed order${p.orders === 1 ? "" : "s"}` : "Rewards reset"}</div></div></div>${p.active ? `<div class="loyalty-bar-bg"><div class="loyalty-bar-fill" style="width:${Math.min(100, p.months / 12 * 100)}%"></div></div><div class="loyalty-steps">${tile(p.orders >= 2,"2 orders","Barcelona vacation entry")}${tile(p.orders >= 4,"4 orders","15% off for life while active")}${tile(p.orders >= 6,"6 orders","Lifetime-rate milestone")}${tile(p.months >= 12,"12 months","Comprehensive blood testing")}</div><p class="loyalty-hint">Your ${p.cadence.initialMonths}-month introductory supply and ${p.cadence.recurringMonths}-month renewal cadence are tracked separately for this package.</p>${p.orders >= 4 ? `<button class="btn full" onclick="claimLoyaltyReward('${p.sub.id}')" ${state.loyaltyClaiming ? "disabled" : ""}>${state.loyaltyClaiming ? "Applying…" : "Activate my lifetime 15% rate"}</button>` : ""}` : `<p class="loyalty-warn">This subscription is no longer active, so its rewards progress has returned to zero.</p>`}</div></div>`).join("");
+  return programs.map(p => `<div class="section" style="margin-top:8px;"><div class="loyalty-card ${p.orders >= 2 ? "unlocked" : ""}"><div class="loyalty-header"><div class="loyalty-icon">🎁</div><div><div class="loyalty-title">HealthyBlood Rewards</div><div class="loyalty-sub">${esc(p.sub.items?.[0]?.title || "Subscription")} · ${p.active ? `${p.orders} completed order${p.orders === 1 ? "" : "s"}` : "Rewards reset"}</div></div></div><div class="loyalty-trip" style="background-image:url('/app/assets/calabria-bergamot-experience.png')"><div class="loyalty-trip-copy"><strong>Win the Calabria Bergamot Experience</strong><span>A fully paid luxury-resort stay and private visit to the Italian farms where citrus bergamot originates. Next drawing: <b>${nextRewardDrawing()}</b>. Active eligible members can re-enter every month.</span></div></div>${p.active ? `<div class="loyalty-bar-bg"><div class="loyalty-bar-fill" style="width:${Math.min(100, p.months / 12 * 100)}%"></div></div><div class="loyalty-steps">${tile(p.orders >= 2,"2 orders","One entry in every monthly Calabria drawing")}${tile(p.orders >= 4,"4 orders","15% off for life while active")}${tile(p.orders >= 6,"6 orders","Upgrade to 25% off for life while active")}${tile(p.months >= 12,"12 months","Comprehensive blood testing paid by Reclaime")}</div><p class="loyalty-hint">Your ${p.cadence.initialMonths}-month introductory supply and ${p.cadence.recurringMonths}-month renewal cadence are tracked separately for this package. Skips and date changes do not erase progress.</p>${p.orders >= 4 ? `<button class="btn full" onclick="claimLoyaltyReward('${p.sub.id}')" ${state.loyaltyClaiming ? "disabled" : ""}>${state.loyaltyClaiming ? "Applying…" : `Activate my lifetime ${p.orders >= 6 ? 25 : 15}% rate`}</button>` : ""}` : `<p class="loyalty-warn">This subscription is no longer active, so its rewards progress has returned to zero.</p>`}</div></div>`).join("");
 }
 
 function claimLoyaltyReward(subscriptionId) {
@@ -3228,7 +3243,7 @@ function claimLoyaltyReward(subscriptionId) {
     }),
   }).then(r => r.json()).then(data => {
     if (data.error) throw new Error(data.error);
-    state.banner = { type: "success", msg: "🎉 Your 15% lifetime subscriber rate is active while this subscription remains active." };
+    state.banner = { type: "success", msg: `🎉 Your ${data.discountPercent}% lifetime subscriber rate is active while this subscription remains active.` };
     state.loyaltyClaiming = false;
     loadSubs();
     render();
