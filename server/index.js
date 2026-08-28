@@ -353,7 +353,7 @@ app.get("/api/hb/subscriptions", async (req, res) => {
         const entry = loyaltyLedger[String(sub.id)] || {};
         const tier = Number(entry.tier || 0), base = Number(entry.basePrice || 0);
         const current = Number((detail.items || sub.items || [])[0]?.price || 0), expected = Number((base * (1 - tier / 100)).toFixed(2));
-        return { ...sub, ...detail, loyalty_applied_tier: tier, loyalty_base_price: base, loyalty_price_valid: tier > 0 && base > 0 && Math.abs(current - expected) < 0.005 };
+        return { ...sub, ...detail, loyalty_applied_tier: tier, loyalty_base_price: base, loyalty_price_valid: tier > 0 && base > 0 && Math.abs(current - expected) < 0.005, vacation_entry_months: entry.vacationEntries || [], blood_test_claimed: Boolean(entry.bloodTestClaimedAt) };
       } catch (_) { return sub; }
     }));
     res.json({ subscriptions: detailedSubs });
@@ -361,6 +361,40 @@ app.get("/api/hb/subscriptions", async (req, res) => {
     console.error("[Seal] Error:", err.message);
     res.status(500).json({ error: err.message });
   }
+});
+
+// Non-price reward claims: one vacation entry per eligible month and one blood-test claim.
+app.post("/api/hb/reward-claim", async (req, res) => {
+  try {
+    if (!SEAL_API_TOKEN) return res.status(500).json({ error: "Seal API not configured" });
+    const { subscriptionId, email, reward } = req.body;
+    if (!subscriptionId || !email || !["vacation_entry", "blood_test"].includes(reward)) return res.status(400).json({ error: "Invalid reward claim" });
+    const headers = { "X-Seal-Token": SEAL_API_TOKEN, "Content-Type": "application/json" };
+    const sr = await fetch(`${SEAL_BASE}/subscriptions?query=${encodeURIComponent(email)}&with-items=true&with-billing-attempts=true`, { headers });
+    const sd = await sr.json();
+    const list = sd.payload?.subscriptions || sd.payload || sd.subscriptions || [];
+    const sub = (Array.isArray(list) ? list : [list]).find(s => String(s.id) === String(subscriptionId));
+    if (!sub || !["active", "paused"].includes(String(sub.status || "").toLowerCase())) return res.status(404).json({ error: "Eligible subscription not found" });
+    const renewals = (sub.billing_attempts || []).filter(a => a.completed_at || ["completed","success","succeeded","paid"].includes(String(a.status || "").toLowerCase())).length;
+    const orders = (sub.order_placed ? 1 : 0) + renewals;
+    const months = sub.order_placed ? Math.floor((Date.now() - new Date(sub.order_placed).getTime()) / 2629800000) : 0;
+    const now = new Date(), monthKey = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`;
+    const key = String(subscriptionId), entry = loyaltyLedger[key] || {};
+    if (reward === "vacation_entry") {
+      if (orders < 2) return res.status(403).json({ error: "Complete two orders to unlock monthly entries" });
+      if (now.getUTCDate() < 8) return res.status(403).json({ error: "Monthly entry claiming opens on the 8th" });
+      const monthsClaimed = new Set(entry.vacationEntries || []);
+      if (monthsClaimed.has(monthKey)) return res.json({ success: true, alreadyClaimed: true, reward, monthKey });
+      monthsClaimed.add(monthKey); entry.vacationEntries = [...monthsClaimed];
+    } else {
+      if (months < 12) return res.status(403).json({ error: "Twelve active months are required" });
+      if (entry.bloodTestClaimedAt) return res.json({ success: true, alreadyClaimed: true, reward });
+      entry.bloodTestClaimedAt = new Date().toISOString();
+    }
+    loyaltyLedger[key] = { ...entry, updatedAt: new Date().toISOString() };
+    await saveLoyaltyLedger();
+    res.json({ success: true, reward, monthKey });
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 // Get a single subscription by id (returns full details with items + billing attempts)
