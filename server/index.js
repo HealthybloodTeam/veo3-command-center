@@ -692,9 +692,19 @@ app.post("/api/hb/loyalty-reward", async (req, res) => {
 app.post("/api/hb/subscription/:subId/reschedule", async (req, res) => {
   try {
     if (!SEAL_API_TOKEN) return res.status(500).json({ error: "SEAL_API_TOKEN not configured" });
-    const { subId } = req.params, { billingAttemptId, date } = req.body;
-    if (!billingAttemptId || !/^\d{4}-\d{2}-\d{2}$/.test(String(date || ""))) return res.status(400).json({ error: "Choose a valid upcoming delivery date." });
+    const { subId } = req.params, { date } = req.body;
+    let { billingAttemptId } = req.body;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(date || ""))) return res.status(400).json({ error: "Choose a valid upcoming delivery date." });
     if (new Date(`${date}T23:59:59Z`) <= new Date()) return res.status(400).json({ error: "The delivery date must be in the future." });
+    if (!billingAttemptId) {
+      const detailResponse = await fetch(`${SEAL_BASE}/subscription?id=${encodeURIComponent(subId)}`, { headers: { "X-Seal-Token": SEAL_API_TOKEN } });
+      const detailData = await detailResponse.json();
+      const detail = detailData.payload || detailData;
+      const attempts = (detail.billing_attempts || []).filter(a => !a.completed_at && !["completed","skipped","cancelled","canceled","refunded"].includes(String(a.status || "").toLowerCase()));
+      attempts.sort((a,b) => new Date(a.date || a.billing_date || a.scheduled_at || 0) - new Date(b.date || b.billing_date || b.scheduled_at || 0));
+      billingAttemptId = attempts[0]?.id;
+    }
+    if (!billingAttemptId) return res.status(409).json({ error: "We could not find the next scheduled delivery. Please resume the subscription or contact support to set a new date." });
     const r = await fetch(`${SEAL_BASE}/subscription-billing-attempt`, {
       method: "PUT",
       headers: { "X-Seal-Token": SEAL_API_TOKEN, "Content-Type": "application/json" },
