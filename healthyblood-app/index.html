@@ -2098,6 +2098,7 @@ const state = {
   actionBusy: null,
   cancelFlowId: null,
   cancelFlowStep: 1,
+  cancelExitAction: "cancel",
   cancelReason: null,
   cancelVideoComplete: false,
   cancelVideoMaxTime: 0,
@@ -3553,7 +3554,7 @@ function renderCancelFlow(sub, billingAttemptId, nextCharge, packSize) {
       <p>Choose the main reason, and we’ll tailor the best option.</p>
       <div class="cancel-reasons">${[['too_much','I have too many bottles'],['price','It costs too much right now'],['results','I’m not seeing the results yet'],['break','I need a break'],['payment','I need to update my payment'],['other','Something else']].map(([v,l])=>`<label class="cancel-reason"><input type="radio" name="hb-cancel-reason" value="${v}" ${state.cancelReason===v?'checked':''} onchange="state.cancelReason='${v}'">${l}</label>`).join('')}</div>
       ${state.cancelReason === 'too_much' ? `<div class="save-offer"><strong>Let’s match your delivery to your supply</strong><p>${isMultiPack?`Your package should last about ${packSize} months. Move the next delivery to when you are more likely to run out.`:'Choose the date you expect to need your next bottle.'}</p><input class="cancel-date" type="date" id="hb-cancel-date" min="${minDate}" value="${suggestedDate}"><button class="btn full" onclick="changeNextDelivery('${subId}',${billingAttemptId || 'null'},document.getElementById('hb-cancel-date').value)">Use this date and keep my plan</button></div>` : state.cancelReason === 'break' ? `<div class="save-offer"><strong>Take breathing room without losing everything</strong><p>Move your next order back instead of resetting your rewards and annual blood-panel progress.</p><input class="cancel-date" type="date" id="hb-cancel-date" min="${minDate}" value="${suggestedDate}"><button class="btn full" onclick="changeNextDelivery('${subId}',${billingAttemptId || 'null'},document.getElementById('hb-cancel-date').value)">Move my order and stay</button></div>` : state.cancelReason === 'price' ? `<div class="save-offer"><strong>Lower how often you are charged</strong><p>Space deliveries farther apart and keep your subscriber pricing and benefits.</p><button class="btn full" onclick="updateSubFrequency('${subId}','${suggest.months}_month'); closeCancelFlow();">Switch to ${suggest.label}</button></div>` : state.cancelReason === 'results' ? `<div class="save-offer"><strong>Consistency is where the value compounds</strong><p>Keep Cora, recipes, daily tracking, and your blood-panel milestone while giving your routine more time.</p></div>` : state.cancelReason === 'payment' ? `<div class="save-offer"><strong>Your subscription does not need to end</strong><p>Update your payment method securely through Shopify and keep every benefit.</p></div>` : ''}
-      <div class="cancel-actions"><button class="btn full" ${state.cancelReason?'':'disabled'} onclick="state.cancelReason&&setCancelStep(3)">Continue</button><button class="btn full ghost" onclick="closeCancelFlow()">Keep my subscription</button></div>
+      <div class="cancel-actions"><button class="btn full" onclick="continueCancelReason()">Continue</button><button class="btn full ghost" onclick="closeCancelFlow()">Keep my subscription</button></div>
     </div>`;
   if (step === 3) return `
     <div class="cancel-flow">
@@ -3573,11 +3574,11 @@ function renderCancelFlow(sub, billingAttemptId, nextCharge, packSize) {
     </div>`;
   return `
     <div class="cancel-flow">
-      <h3>Confirm cancellation</h3>
-      <p>Your future deliveries will stop and this subscription’s rewards progress, vacation entries, mystery gifts, app benefits, and path to the $300 blood panel will end.</p>
+      <h3>${state.cancelExitAction==='pause'?'Confirm your pause':'Confirm cancellation'}</h3>
+      <p>${state.cancelExitAction==='pause'?'Your deliveries and app access will pause, interrupting the momentum you have built.':'Your future deliveries will stop and this subscription’s rewards progress, vacation entries, mystery gifts, app benefits, and path to the $300 blood panel will end.'}</p>
       <div class="cancel-actions">
         <button class="btn full ghost" onclick="closeCancelFlow()">Keep my subscription</button>
-        <button class="btn full" style="opacity:.65;font-size:13px;background:var(--bg);border:1px solid var(--border-soft);color:var(--text-muted)" onclick="confirmCancel('${subId}')">Yes, cancel my subscription</button>
+        <button class="btn full" style="opacity:.65;font-size:13px;background:var(--bg);border:1px solid var(--border-soft);color:var(--text-muted)" onclick="confirmCancel('${subId}')">${state.cancelExitAction==='pause'?'Yes, pause my subscription':'Yes, cancel my subscription'}</button>
       </div>
     </div>
   `;
@@ -3599,8 +3600,13 @@ function confirmSkip(subId, billingAttemptId) {
   skipNext(subId, billingAttemptId);
 }
 function startPauseFlow(id, packSize) {
-  state.pauseFlowId = id;
-  state.pausePackSize = packSize || 1;
+  state.pauseFlowId = null;
+  state.cancelFlowId = id;
+  state.cancelExitAction = "pause";
+  state.cancelFlowStep = 1;
+  state.cancelReason = null;
+  state.cancelVideoComplete = false;
+  state.cancelVideoMaxTime = 0;
   render();
 }
 function confirmPause(id) {
@@ -3609,20 +3615,23 @@ function confirmPause(id) {
 }
 function startCancelFlow(id) {
   state.cancelFlowId = id;
+  state.cancelExitAction = "cancel";
   state.cancelFlowStep = 1;
   state.cancelReason = null;
   state.cancelVideoComplete = false;
   state.cancelVideoMaxTime = 0;
   render();
 }
-function closeCancelFlow() { state.cancelFlowId=null; state.cancelFlowStep=1; state.cancelReason=null; state.cancelVideoComplete=false; state.cancelVideoMaxTime=0; render(); }
+function closeCancelFlow() { state.cancelFlowId=null; state.cancelFlowStep=1; state.cancelExitAction="cancel"; state.cancelReason=null; state.cancelVideoComplete=false; state.cancelVideoMaxTime=0; render(); }
 function setCancelStep(step) { state.cancelFlowStep=step; render(); }
+function continueCancelReason() { const selected=document.querySelector('input[name="hb-cancel-reason"]:checked'); if(!selected){state.banner={type:"error",msg:"Choose a reason to continue."};render();return} state.cancelReason=selected.value; setCancelStep(3); }
 function trackCancelVideo(video) { if (!video.seeking) state.cancelVideoMaxTime=Math.max(state.cancelVideoMaxTime||0,video.currentTime); }
 function guardCancelVideo(video) { if (video.currentTime > (state.cancelVideoMaxTime||0)+1.5) video.currentTime=state.cancelVideoMaxTime||0; }
 function completeCancelVideo() { state.cancelVideoComplete=true; state.cancelVideoMaxTime=Infinity; render(); }
 function confirmCancel(id) {
+  const action = state.cancelExitAction === "pause" ? "pause" : "cancel";
   state.cancelFlowId = null;
-  subAction(id, "cancel");
+  subAction(id, action);
 }
 // Seal edit: PUT /subscription { id, action: "edit", edit: { delivery_interval: "2 month", billing_interval: "2 month" } }
 function updateSubFrequency(id, val) {
@@ -3724,6 +3733,7 @@ window.startCancelFlow = startCancelFlow;
 window.confirmCancel = confirmCancel;
 window.closeCancelFlow = closeCancelFlow;
 window.setCancelStep = setCancelStep;
+window.continueCancelReason = continueCancelReason;
 window.trackCancelVideo = trackCancelVideo;
 window.guardCancelVideo = guardCancelVideo;
 window.completeCancelVideo = completeCancelVideo;
