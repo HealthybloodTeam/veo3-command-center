@@ -4,6 +4,12 @@ services:
     runtime: node
     buildCommand: npm install
     startCommand: node server/index.js
+    disk:
+      name: healthyblood-loyalty-data
+      mountPath: /var/data/healthyblood
+      sizeGB: 1
     envVars:
       - key: NODE_ENV
         value: production
+      - key: DATA_DIR
+        value: /var/data/healthyblood

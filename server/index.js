@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const multer = require("multer");
 const path = require("path");
+const fs = require("fs");
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -16,6 +17,16 @@ const SEAL_BASE = "https://app.sealsubscriptions.com/shopify/merchant/api";
 const SHOPIFY_DOMAIN = process.env.SHOPIFY_DOMAIN || "";
 const SHOPIFY_ADMIN_TOKEN = process.env.SHOPIFY_ADMIN_TOKEN || "";
 const loyaltyLocks = new Set();
+const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, "..", "data");
+const loyaltyFile = path.join(DATA_DIR, "loyalty-ledger.json");
+let loyaltyLedger = {};
+try { loyaltyLedger = JSON.parse(fs.readFileSync(loyaltyFile, "utf8")); } catch (_) { loyaltyLedger = {}; }
+async function saveLoyaltyLedger() {
+  await fs.promises.mkdir(DATA_DIR, { recursive: true });
+  const temporary = `${loyaltyFile}.tmp`;
+  await fs.promises.writeFile(temporary, JSON.stringify(loyaltyLedger, null, 2));
+  await fs.promises.rename(temporary, loyaltyFile);
+}
 
 app.use(cors());
 app.use(express.json({ limit: "50mb" }));
@@ -339,8 +350,8 @@ app.get("/api/hb/subscriptions", async (req, res) => {
         const detailResponse = await fetch(`${SEAL_BASE}/subscription?id=${encodeURIComponent(sub.id)}`, { headers: sealHeaders });
         const detailData = await detailResponse.json();
         const detail = detailData.payload || detailData;
-        const note = String(detail.admin_note || sub.admin_note || "");
-        const tier = Number(note.match(/tier:([0-9.]+)/i)?.[1] || 0), base = Number(note.match(/Loyalty base:([0-9.]+)/i)?.[1] || 0);
+        const entry = loyaltyLedger[String(sub.id)] || {};
+        const tier = Number(entry.tier || 0), base = Number(entry.basePrice || 0);
         const current = Number((detail.items || sub.items || [])[0]?.price || 0), expected = Number((base * (1 - tier / 100)).toFixed(2));
         return { ...sub, ...detail, loyalty_applied_tier: tier, loyalty_base_price: base, loyalty_price_valid: tier > 0 && base > 0 && Math.abs(current - expected) < 0.005 };
       } catch (_) { return sub; }
@@ -483,13 +494,15 @@ app.post("/api/hb/subscription/:id/:action", async (req, res) => {
       const sr = await fetch(`${SEAL_BASE}/subscription?id=${encodeURIComponent(id)}`, { headers: sealHeaders });
       const sd = await sr.json();
       const sub = sd.payload || sd;
-      const base = String(sub.admin_note || "").match(/Loyalty base:([0-9.]+)/i)?.[1];
+      const base = loyaltyLedger[String(id)]?.basePrice || String(sub.admin_note || "").match(/Loyalty base:([0-9.]+)/i)?.[1];
       const item = sub.items?.[0];
       if (base && item) {
         const restored = { product_id:String(item.product_id), variant_id:String(item.variant_id), quantity:String(item.quantity || 1), title:item.title, sku:String(item.sku || item.variant_id), price:Number(base), taxable:item.taxable ?? 1, requires_shipping:item.requires_shipping ?? 1, one_time:0 };
         await fetch(`${SEAL_BASE}/subscription`, { method:"PUT", headers:sealHeaders, body:JSON.stringify({ id:parseInt(id), action:"add_items", add_items:[restored] }) });
         await fetch(`${SEAL_BASE}/subscription`, { method:"PUT", headers:sealHeaders, body:JSON.stringify({ id:parseInt(id), action:"remove_items", remove_items:[item.id] }) });
       }
+      delete loyaltyLedger[String(id)];
+      await saveLoyaltyLedger();
     }
     const r = await fetch(`${SEAL_BASE}/subscription`, {
       method: "PUT",
@@ -548,11 +561,15 @@ app.post("/api/hb/loyalty-reward", async (req, res) => {
     const discountPercent = completedOrders >= 6 ? 17 : 10;
 
     const item = sub.items[0];
-    const savedBase = String(sub.admin_note || "").match(/Loyalty base:([0-9.]+)/i)?.[1];
-    const appliedTier = Number(String(sub.admin_note || "").match(/tier:([0-9.]+)/i)?.[1] || 0);
-    const originalPrice = parseFloat(savedBase || item.original_price || item.price);
+    const ledgerKey = String(subId), existing = loyaltyLedger[ledgerKey] || {};
+    const quantity = Math.max(1, Number(item.quantity || 1));
+    const candidates = [existing.basePrice, item.original_price, ownedSub.items?.[0]?.original_price, item.price, ownedSub.items?.[0]?.price, sub.total_value && Number(sub.total_value) / quantity, ownedSub.total_value && Number(ownedSub.total_value) / quantity, ...(sub.billing_attempts || []).flatMap(a => [a.total_value, a.amount, a.price, a.order_total].map(v => v && Number(v) / quantity))].map(Number).filter(v => Number.isFinite(v) && v > 0);
+    const originalPrice = Math.max(...candidates);
+    if (!Number.isFinite(originalPrice)) return res.status(409).json({ error: "Unable to recover the original subscription price. No price change was made." });
     const discountedPrice = (originalPrice * (1 - discountPercent / 100)).toFixed(2);
-    if (appliedTier === discountPercent && Math.abs(Number(item.price) - Number(discountedPrice)) < 0.005) return res.json({ success: true, alreadyApplied: true, discountPercent, newPrice: Number(item.price), originalPrice });
+    if (Number(existing.tier) === discountPercent && existing.status === "active" && Math.abs(Number(item.price) - Number(discountedPrice)) < 0.005) return res.json({ success: true, alreadyApplied: true, discountPercent, newPrice: Number(item.price), originalPrice });
+    loyaltyLedger[ledgerKey] = { basePrice: originalPrice, tier: discountPercent, targetPrice: Number(discountedPrice), status: "pending", updatedAt: new Date().toISOString() };
+    await saveLoyaltyLedger();
     console.log(`[Loyalty] Item: ${item.title} | Original: $${originalPrice} → Discounted: $${discountedPrice} (${discountPercent}% off)`);
 
     // Step 2: Add new item at discounted price
@@ -590,6 +607,8 @@ app.post("/api/hb/loyalty-reward", async (req, res) => {
       body: JSON.stringify({ id: subId, action: "edit", edit: { admin_note: `Loyalty base:${originalPrice}; tier:${discountPercent}; updated:${new Date().toISOString().split("T")[0]}` } }),
     });
     console.log("[Loyalty] admin_note response:", noteResponse.status);
+    loyaltyLedger[ledgerKey] = { ...loyaltyLedger[ledgerKey], status: "active", updatedAt: new Date().toISOString() };
+    await saveLoyaltyLedger();
 
     console.log(`[Loyalty] Done — ${discountPercent}% permanent discount applied to sub ${subId}`);
     res.json({ success: true, discountPercent, newPrice: discountedPrice, originalPrice });
