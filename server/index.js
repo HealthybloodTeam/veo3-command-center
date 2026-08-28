@@ -489,9 +489,7 @@ app.post("/api/hb/subscription/:id/:action", async (req, res) => {
 });
 
 // ==========================================
-// Loyalty Reward — Permanent discount on Seal subscription
-// Base: 20% off | Tier 1 (3 orders): 25% off | Tier 2 (6 orders): 30% off
-// Miss an order → resets to base 20%
+// Loyalty Reward — 15% at four orders, upgraded to 25% at six orders.
 // Applies by editing item price directly in Seal (remove old, add at discounted price)
 // ==========================================
 app.post("/api/hb/loyalty-reward", async (req, res) => {
@@ -502,7 +500,7 @@ app.post("/api/hb/loyalty-reward", async (req, res) => {
 
     const subId = parseInt(subscriptionId);
     const sealHeaders = { "X-Seal-Token": SEAL_API_TOKEN, "Content-Type": "application/json" };
-    console.log(`[Loyalty] Applying ${discountPercent}% permanent discount to sub ${subId} for ${email}`);
+    console.log(`[Loyalty] Checking reward eligibility for sub ${subId} for ${email}`);
 
     // Step 1: Fetch the subscription to get current item details
     const fetchUrl = `${SEAL_BASE}/subscriptions?query=${encodeURIComponent(email)}&with-items=true&with-billing-attempts=true`;
@@ -561,18 +559,12 @@ app.post("/api/hb/loyalty-reward", async (req, res) => {
     const d2 = await r2.json();
     console.log("[Loyalty] remove_items response:", r2.status, JSON.stringify(d2));
 
-    // Step 4: Also update the subscription's total_value
-    const totalValue = (parseFloat(discountedPrice) * (item.quantity || 1)).toFixed(2);
-    const r3 = await fetch(`${SEAL_BASE}/subscription`, {
-      method: "PUT", headers: sealHeaders,
-      body: JSON.stringify({ id: subId, action: "edit", edit: { admin_note: `Loyalty ${discountPercent}% off applied — ${new Date().toISOString().split("T")[0]}` } }),
-    });
-    const d3 = await r3.json();
-    console.log("[Loyalty] admin_note response:", r3.status);
-    await fetch(`${SEAL_BASE}/subscription`, {
+    // Save the original base price so the 25% upgrade and cancellation reset never compound.
+    const noteResponse = await fetch(`${SEAL_BASE}/subscription`, {
       method: "PUT", headers: sealHeaders,
       body: JSON.stringify({ id: subId, action: "edit", edit: { admin_note: `Loyalty base:${originalPrice}; tier:${discountPercent}; updated:${new Date().toISOString().split("T")[0]}` } }),
     });
+    console.log("[Loyalty] admin_note response:", noteResponse.status);
 
     console.log(`[Loyalty] Done — ${discountPercent}% permanent discount applied to sub ${subId}`);
     res.json({ success: true, discountPercent, newPrice: discountedPrice, originalPrice });
