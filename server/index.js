@@ -479,6 +479,10 @@ app.post("/api/hb/subscription/:subId/skip-next", async (req, res) => {
   }
 });
 
+// Register this before the wildcard /:id/:action route. The handler function is
+// declared below and is hoisted by JavaScript.
+app.post("/api/hb/subscription/:subId/reschedule", handleReschedule);
+
 // Edit subscription item quantity: add new item first, then remove old
 // Seal has no direct qty edit — must do add_items + remove_items
 // Adding first ensures the subscription always has at least one item
@@ -689,7 +693,7 @@ app.post("/api/hb/loyalty-reward", async (req, res) => {
   }
 });
 
-app.post("/api/hb/subscription/:subId/reschedule", async (req, res) => {
+async function handleReschedule(req, res) {
   try {
     if (!SEAL_API_TOKEN) return res.status(500).json({ error: "SEAL_API_TOKEN not configured" });
     const { subId } = req.params, { date } = req.body;
@@ -713,7 +717,7 @@ app.post("/api/hb/subscription/:subId/reschedule", async (req, res) => {
     const data = await r.json();
     res.status(r.status).json(data);
   } catch (err) { res.status(500).json({ error: err.message }); }
-});
+}
 
 app.listen(PORT, () => {
   console.log(`Veo 3 Proxy + HealthyBlood App running on port ${PORT}`);
