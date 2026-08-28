@@ -3629,8 +3629,9 @@ function guardCancelVideo(video) { if (video.currentTime > (state.cancelVideoMax
 function completeCancelVideo() { state.cancelVideoComplete=true; state.cancelVideoMaxTime=Infinity; render(); }
 function confirmCancel(id) {
   const action = state.cancelExitAction === "pause" ? "pause" : "cancel";
+  const reason = state.cancelReason || "unspecified";
   state.cancelFlowId = null;
-  subAction(id, action);
+  subAction(id, action, { reason, source:"retention_flow" });
 }
 // Seal edit: PUT /subscription { id, action: "edit", edit: { delivery_interval: "2 month", billing_interval: "2 month" } }
 function updateSubFrequency(id, val) {
@@ -3672,7 +3673,7 @@ async function claimFinalRetentionDeal(id, billingAttemptId, date) {
     const discountResponse=await fetch(API+"/hb/loyalty-reward",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({subscriptionId:Number(id),email:state.email,retentionOffer:true})});
     const discount=await discountResponse.json();
     if(!discountResponse.ok||discount.error)throw new Error(discount.error||"We could not protect your lifetime rate.");
-    const deal=await apiPost("/hb/retention-final",{subscriptionId:Number(id),email:state.email,billingAttemptId,date});
+    const deal=await apiPost("/hb/retention-final",{subscriptionId:Number(id),email:state.email,billingAttemptId,date,reason:state.cancelReason||"unspecified"});
     localStorage.setItem(`hb_loyalty_claim_${id}`,String(Math.max(10,Number(discount.discountPercent||10))));
     closeCancelFlow(); state.banner={type:"success",msg:deal.alreadyClaimed?"Your lifetime rate and delivery date are protected; your free bottle was already added.":"Deal accepted: lifetime savings, a new delivery date, and one free bottle are confirmed."}; state.actionBusy=null; loadSubs();
   } catch(e) { state.banner={type:"error",msg:e.message||"We could not complete the deal. No additional attempt was made."}; state.actionBusy=null; render(); }
@@ -3778,7 +3779,7 @@ async function loadSubs() {
   }
   state.subsLoading = false; render();
 }
-async function subAction(id, action) {
+async function subAction(id, action, details={}) {
   state.actionBusy = id; state.banner = null; render();
   const msgs = {
     pause: "Subscription paused. You can resume anytime.",
@@ -3787,7 +3788,7 @@ async function subAction(id, action) {
     cancel: "Subscription cancelled. We'll miss you!",
   };
   try {
-    await apiPost(`/hb/subscription/${id}/${action}`, {});
+    await apiPost(`/hb/subscription/${id}/${action}`, details);
     state.banner = { type: "success", msg: msgs[action] || "Done!" };
     await loadSubs();
   } catch (e) {

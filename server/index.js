@@ -545,11 +545,16 @@ app.post("/api/hb/subscription/:id/:action", async (req, res) => {
     if (!validActions.includes(action)) return res.status(400).json({ error: "invalid action: " + action });
 
     console.log("[Seal] Action:", action, "on subscription:", id);
-    if (action === "cancel") {
-      const sealHeaders = { "X-Seal-Token": SEAL_API_TOKEN, "Content-Type": "application/json" };
+    const exitReason = String(req.body.reason || "").trim().slice(0, 120);
+    const sealHeaders = { "X-Seal-Token": SEAL_API_TOKEN, "Content-Type": "application/json" };
+    let actionSub = null;
+    if (["cancel","pause"].includes(action)) {
       const sr = await fetch(`${SEAL_BASE}/subscription?id=${encodeURIComponent(id)}`, { headers: sealHeaders });
       const sd = await sr.json();
-      const sub = sd.payload || sd;
+      actionSub = sd.payload || sd;
+    }
+    if (action === "cancel") {
+      const sub = actionSub;
       const notes = rewardNotes(sub);
       const base = notes.hb_loyalty_base || loyaltyLedger[String(id)]?.basePrice;
       const item = sub.items?.[0];
@@ -560,8 +565,9 @@ app.post("/api/hb/subscription/:id/:action", async (req, res) => {
       }
       delete loyaltyLedger[String(id)];
       await saveLoyaltyLedger();
-      await saveRewardNotes(sub, { hb_loyalty_base:null, hb_loyalty_tier:null, hb_vacation_entries:null, hb_blood_test_claimed:null }, sealHeaders);
+      await saveRewardNotes(sub, { hb_loyalty_base:null, hb_loyalty_tier:null, hb_vacation_entries:null, hb_blood_test_claimed:null, hb_exit_reason:exitReason || "unspecified", hb_exit_action:"cancel", hb_exit_recorded_at:new Date().toISOString() }, sealHeaders);
     }
+    if (action === "pause" && actionSub) await saveRewardNotes(actionSub, { hb_exit_reason:exitReason || "unspecified", hb_exit_action:"pause", hb_exit_recorded_at:new Date().toISOString() }, sealHeaders);
     const r = await fetch(`${SEAL_BASE}/subscription`, {
       method: "PUT",
       headers: { "X-Seal-Token": SEAL_API_TOKEN, "Content-Type": "application/json" },
@@ -723,7 +729,7 @@ app.post("/api/hb/retention-final", async (req, res) => {
     const giftResponse = await fetch(`${SEAL_BASE}/subscription`, { method:"PUT", headers, body:JSON.stringify({ id:subscriptionId, action:"add_items", add_items:[freeBottle] }) });
     const giftData = await giftResponse.json();
     if (!giftResponse.ok || giftData.success === false) return res.status(giftResponse.status || 502).json({ error: giftData.error || "The delivery date changed, but the free bottle could not be added. Please contact support." });
-    await saveRewardNotes(sub, { hb_retention_free_bottle:"true" }, headers);
+    await saveRewardNotes(sub, { hb_retention_free_bottle:"true", hb_exit_reason:String(req.body.reason || "unspecified").slice(0,120), hb_retention_outcome:"deal", hb_exit_recorded_at:new Date().toISOString() }, headers);
     res.json({ success:true, reschedule:scheduleData.payload || scheduleData, gift:giftData.payload || giftData });
   } catch (err) { res.status(500).json({ error: err.message || "Unable to complete the final retention deal." }); }
 });
