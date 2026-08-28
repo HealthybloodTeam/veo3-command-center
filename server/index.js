@@ -20,7 +20,11 @@ app.use(cors());
 app.use(express.json({ limit: "50mb" }));
 
 // Serve HealthyBlood PWA at /app
-app.use("/app", express.static(path.join(__dirname, "..", "healthyblood-app")));
+app.use("/app", express.static(path.join(__dirname, "..", "healthyblood-app"), {
+  setHeaders(res, filePath) {
+    if (filePath.endsWith("index.html")) res.setHeader("Cache-Control", "no-store, max-age=0");
+  },
+}));
 
 const upload = multer({
   storage: multer.memoryStorage(),
