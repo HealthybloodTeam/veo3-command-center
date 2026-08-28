@@ -15,6 +15,7 @@ const SEAL_BASE = "https://app.sealsubscriptions.com/shopify/merchant/api";
 // Shopify Admin API (optional — for future use if access token becomes available)
 const SHOPIFY_DOMAIN = process.env.SHOPIFY_DOMAIN || "";
 const SHOPIFY_ADMIN_TOKEN = process.env.SHOPIFY_ADMIN_TOKEN || "";
+const loyaltyLocks = new Set();
 
 app.use(cors());
 app.use(express.json({ limit: "50mb" }));
@@ -332,7 +333,17 @@ app.get("/api/hb/subscriptions", async (req, res) => {
     console.log("[Seal] Final parsed:", subs.length, "subscriptions");
     if (subs.length > 0) console.log("[Seal] First sub keys:", Object.keys(subs[0]).join(", "));
 
-    res.json({ subscriptions: subs });
+    const sealHeaders = { "X-Seal-Token": SEAL_API_TOKEN, "Content-Type": "application/json" };
+    const detailedSubs = await Promise.all(subs.map(async sub => {
+      try {
+        const detailResponse = await fetch(`${SEAL_BASE}/subscription?id=${encodeURIComponent(sub.id)}`, { headers: sealHeaders });
+        const detailData = await detailResponse.json();
+        const detail = detailData.payload || detailData;
+        const note = String(detail.admin_note || sub.admin_note || "");
+        return { ...sub, ...detail, loyalty_applied_tier: Number(note.match(/tier:([0-9.]+)/i)?.[1] || 0), loyalty_base_price: Number(note.match(/Loyalty base:([0-9.]+)/i)?.[1] || 0) };
+      } catch (_) { return sub; }
+    }));
+    res.json({ subscriptions: detailedSubs });
   } catch (err) {
     console.error("[Seal] Error:", err.message);
     res.status(500).json({ error: err.message });
@@ -503,6 +514,8 @@ app.post("/api/hb/loyalty-reward", async (req, res) => {
     if (!subscriptionId || !email) return res.status(400).json({ error: "subscriptionId and email required" });
 
     const subId = parseInt(subscriptionId);
+    if (loyaltyLocks.has(subId)) return res.status(409).json({ error: "Your loyalty reward is already being applied" });
+    loyaltyLocks.add(subId);
     const sealHeaders = { "X-Seal-Token": SEAL_API_TOKEN, "Content-Type": "application/json" };
     console.log(`[Loyalty] Checking reward eligibility for sub ${subId} for ${email}`);
 
@@ -511,12 +524,16 @@ app.post("/api/hb/loyalty-reward", async (req, res) => {
     const fr = await fetch(fetchUrl, { headers: sealHeaders });
     const fd = await fr.json();
     const subs = fd.payload?.subscriptions || fd.payload || [];
-    const sub = (Array.isArray(subs) ? subs : [subs]).find(s => s.id === subId || String(s.id) === String(subId));
+    const ownedSub = (Array.isArray(subs) ? subs : [subs]).find(s => s.id === subId || String(s.id) === String(subId));
 
-    if (!sub || !sub.items?.[0]) {
+    if (!ownedSub) {
       console.error("[Loyalty] Subscription or items not found:", subId);
       return res.status(404).json({ error: "Subscription not found" });
     }
+    const detailResponse = await fetch(`${SEAL_BASE}/subscription?id=${encodeURIComponent(subId)}`, { headers: sealHeaders });
+    const detailData = await detailResponse.json();
+    const sub = { ...ownedSub, ...(detailData.payload || detailData) };
+    if (!sub.items?.[0]) return res.status(404).json({ error: "Subscription item not found" });
 
     if (!["active", "paused"].includes(String(sub.status || "").toLowerCase())) return res.status(409).json({ error: "This subscription is not active, so its rewards have reset" });
     const completedRenewals = (sub.billing_attempts || []).filter(a => {
@@ -530,8 +547,10 @@ app.post("/api/hb/loyalty-reward", async (req, res) => {
 
     const item = sub.items[0];
     const savedBase = String(sub.admin_note || "").match(/Loyalty base:([0-9.]+)/i)?.[1];
+    const appliedTier = Number(String(sub.admin_note || "").match(/tier:([0-9.]+)/i)?.[1] || 0);
     const originalPrice = parseFloat(savedBase || item.original_price || item.price);
     const discountedPrice = (originalPrice * (1 - discountPercent / 100)).toFixed(2);
+    if (appliedTier === discountPercent && Math.abs(Number(item.price) - Number(discountedPrice)) < 0.005) return res.json({ success: true, alreadyApplied: true, discountPercent, newPrice: Number(item.price), originalPrice });
     console.log(`[Loyalty] Item: ${item.title} | Original: $${originalPrice} → Discounted: $${discountedPrice} (${discountPercent}% off)`);
 
     // Step 2: Add new item at discounted price
@@ -563,7 +582,7 @@ app.post("/api/hb/loyalty-reward", async (req, res) => {
     const d2 = await r2.json();
     console.log("[Loyalty] remove_items response:", r2.status, JSON.stringify(d2));
 
-    // Save the original base price so the 25% upgrade and cancellation reset never compound.
+    // Save the original base price so upgrades and cancellation resets never compound.
     const noteResponse = await fetch(`${SEAL_BASE}/subscription`, {
       method: "PUT", headers: sealHeaders,
       body: JSON.stringify({ id: subId, action: "edit", edit: { admin_note: `Loyalty base:${originalPrice}; tier:${discountPercent}; updated:${new Date().toISOString().split("T")[0]}` } }),
@@ -575,6 +594,8 @@ app.post("/api/hb/loyalty-reward", async (req, res) => {
   } catch (err) {
     console.error("[Loyalty] Error:", err.message);
     res.status(500).json({ error: err.message });
+  } finally {
+    if (req.body?.subscriptionId) loyaltyLocks.delete(parseInt(req.body.subscriptionId));
   }
 });
 
