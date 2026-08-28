@@ -610,12 +610,12 @@ app.post("/api/hb/loyalty-reward", async (req, res) => {
       return a.completed_at || ["completed", "success", "succeeded", "paid"].includes(status);
     }).length;
     const completedOrders = (sub.order_placed ? 1 : 0) + completedRenewals;
-    if (completedOrders < 4) return res.status(403).json({ error: `Complete ${4 - completedOrders} more order${4 - completedOrders === 1 ? "" : "s"} to unlock this reward` });
-
-    const discountPercent = completedOrders >= 6 ? 17 : 10;
-
     const item = sub.items[0];
     const ledgerKey = String(subId), existing = loyaltyLedger[ledgerKey] || {}, notes = rewardNotes(sub);
+    const retentionOffer = req.body.retentionOffer === true;
+    if (completedOrders < 4 && !retentionOffer) return res.status(403).json({ error: `Complete ${4 - completedOrders} more order${4 - completedOrders === 1 ? "" : "s"} to unlock this reward` });
+    const earnedPercent = completedOrders >= 6 ? 17 : completedOrders >= 4 ? 10 : 0;
+    const discountPercent = retentionOffer ? Math.max(10, earnedPercent, Number(notes.hb_loyalty_tier || existing.tier || 0)) : earnedPercent;
     if (!notes.hb_loyalty_tier && !existing.tier && completedOrders >= 6 && /bergamot.*1\s*pack/i.test(String(item.title || "")) && Number(item.price) < 20) {
       await saveRewardNotes(sub, { hb_loyalty_tier: 17 }, sealHeaders);
       loyaltyLedger[ledgerKey] = { tier:17, status:"active", migrated:true, updatedAt:new Date().toISOString() };
@@ -687,6 +687,22 @@ app.post("/api/hb/loyalty-reward", async (req, res) => {
   } finally {
     if (req.body?.subscriptionId) loyaltyLocks.delete(parseInt(req.body.subscriptionId));
   }
+});
+
+app.post("/api/hb/subscription/:subId/reschedule", async (req, res) => {
+  try {
+    if (!SEAL_API_TOKEN) return res.status(500).json({ error: "SEAL_API_TOKEN not configured" });
+    const { subId } = req.params, { billingAttemptId, date } = req.body;
+    if (!billingAttemptId || !/^\d{4}-\d{2}-\d{2}$/.test(String(date || ""))) return res.status(400).json({ error: "Choose a valid upcoming delivery date." });
+    if (new Date(`${date}T23:59:59Z`) <= new Date()) return res.status(400).json({ error: "The delivery date must be in the future." });
+    const r = await fetch(`${SEAL_BASE}/subscription-billing-attempt`, {
+      method: "PUT",
+      headers: { "X-Seal-Token": SEAL_API_TOKEN, "Content-Type": "application/json" },
+      body: JSON.stringify({ id: parseInt(billingAttemptId), subscription_id: parseInt(subId), date, time: "09:00", timezone: "+00:00", action: "reschedule", reset_schedule: "true" }),
+    });
+    const data = await r.json();
+    res.status(r.status).json(data);
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 app.listen(PORT, () => {
