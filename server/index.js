@@ -340,7 +340,9 @@ app.get("/api/hb/subscriptions", async (req, res) => {
         const detailData = await detailResponse.json();
         const detail = detailData.payload || detailData;
         const note = String(detail.admin_note || sub.admin_note || "");
-        return { ...sub, ...detail, loyalty_applied_tier: Number(note.match(/tier:([0-9.]+)/i)?.[1] || 0), loyalty_base_price: Number(note.match(/Loyalty base:([0-9.]+)/i)?.[1] || 0) };
+        const tier = Number(note.match(/tier:([0-9.]+)/i)?.[1] || 0), base = Number(note.match(/Loyalty base:([0-9.]+)/i)?.[1] || 0);
+        const current = Number((detail.items || sub.items || [])[0]?.price || 0), expected = Number((base * (1 - tier / 100)).toFixed(2));
+        return { ...sub, ...detail, loyalty_applied_tier: tier, loyalty_base_price: base, loyalty_price_valid: tier > 0 && base > 0 && Math.abs(current - expected) < 0.005 };
       } catch (_) { return sub; }
     }));
     res.json({ subscriptions: detailedSubs });
