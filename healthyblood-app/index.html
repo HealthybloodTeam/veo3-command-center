@@ -3214,7 +3214,7 @@ function loyaltyProgram(sub) {
 
 function nextRewardDrawing() {
   const now = new Date();
-  const drawing = new Date(now.getFullYear(), now.getMonth() + (now.getDate() >= 8 ? 1 : 0), 8, 12);
+  const drawing = new Date(now.getFullYear(), now.getMonth() + 1, 8, 12);
   return drawing.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
 }
 
