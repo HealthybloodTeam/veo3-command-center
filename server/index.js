@@ -461,6 +461,13 @@ app.post("/api/hb/subscription/:id/:action", async (req, res) => {
     if (!validActions.includes(action)) return res.status(400).json({ error: "invalid action: " + action });
 
     console.log("[Seal] Action:", action, "on subscription:", id);
+    if (action === "cancel" && process.env.LOYALTY_15_DISCOUNT_CODE) {
+      await fetch(`${SEAL_BASE}/subscription-discount-code`, {
+        method: "PUT",
+        headers: { "X-Seal-Token": SEAL_API_TOKEN, "Content-Type": "application/json" },
+        body: JSON.stringify({ subscription_id: parseInt(id), action: "remove", discount_code: process.env.LOYALTY_15_DISCOUNT_CODE }),
+      }).catch(() => null);
+    }
     const r = await fetch(`${SEAL_BASE}/subscription`, {
       method: "PUT",
       headers: { "X-Seal-Token": SEAL_API_TOKEN, "Content-Type": "application/json" },
@@ -484,15 +491,18 @@ app.post("/api/hb/subscription/:id/:action", async (req, res) => {
 app.post("/api/hb/loyalty-reward", async (req, res) => {
   try {
     if (!SEAL_API_TOKEN) return res.status(500).json({ error: "Seal API not configured" });
-    const { subscriptionId, discountPercent, email } = req.body;
-    if (!subscriptionId || !discountPercent) return res.status(400).json({ error: "subscriptionId and discountPercent required" });
+    const { subscriptionId, email } = req.body;
+    const discountPercent = 15;
+    if (!subscriptionId || !email) return res.status(400).json({ error: "subscriptionId and email required" });
+    const discountCode = process.env.LOYALTY_15_DISCOUNT_CODE;
+    if (!discountCode) return res.status(503).json({ error: "The lifetime 15% reward is not configured yet" });
 
     const subId = parseInt(subscriptionId);
     const sealHeaders = { "X-Seal-Token": SEAL_API_TOKEN, "Content-Type": "application/json" };
     console.log(`[Loyalty] Applying ${discountPercent}% permanent discount to sub ${subId} for ${email}`);
 
     // Step 1: Fetch the subscription to get current item details
-    const fetchUrl = `${SEAL_BASE}/subscriptions?query=${encodeURIComponent(email)}&with-items=true`;
+    const fetchUrl = `${SEAL_BASE}/subscriptions?query=${encodeURIComponent(email)}&with-items=true&with-billing-attempts=true`;
     const fr = await fetch(fetchUrl, { headers: sealHeaders });
     const fd = await fr.json();
     const subs = fd.payload?.subscriptions || fd.payload || [];
@@ -502,6 +512,22 @@ app.post("/api/hb/loyalty-reward", async (req, res) => {
       console.error("[Loyalty] Subscription or items not found:", subId);
       return res.status(404).json({ error: "Subscription not found" });
     }
+
+    if (!["active", "paused"].includes(String(sub.status || "").toLowerCase())) return res.status(409).json({ error: "This subscription is not active, so its rewards have reset" });
+    const completedRenewals = (sub.billing_attempts || []).filter(a => {
+      const status = String(a.status || "").toLowerCase();
+      return a.completed_at || ["completed", "success", "succeeded", "paid"].includes(status);
+    }).length;
+    const completedOrders = (sub.order_placed ? 1 : 0) + completedRenewals;
+    if (completedOrders < 4) return res.status(403).json({ error: `Complete ${4 - completedOrders} more order${4 - completedOrders === 1 ? "" : "s"} to unlock this reward` });
+
+    const reward = await fetch(`${SEAL_BASE}/subscription-discount-code`, {
+      method: "PUT", headers: sealHeaders,
+      body: JSON.stringify({ subscription_id: subId, action: "add", discount_code: discountCode }),
+    });
+    const rewardData = await reward.json();
+    if (!reward.ok || rewardData.success === false) return res.status(reward.status).json({ error: rewardData.error || "Unable to apply the loyalty reward" });
+    return res.json({ success: true, discountPercent: 15, completedOrders });
 
     const item = sub.items[0];
     const originalPrice = parseFloat(item.price || item.original_price);

@@ -7,3 +7,5 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      - key: LOYALTY_15_DISCOUNT_CODE
+        sync: false

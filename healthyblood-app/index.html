@@ -3177,154 +3177,58 @@ function getAllBillingAttempts() {
   return all.sort((a, b) => new Date(b.date || b.billing_date || 0) - new Date(a.date || a.billing_date || 0));
 }
 
-// Consistency streak: count consecutive completed billing attempts from most recent backward.
-// If the gap between any two exceeds 210 days (~7 months), the streak breaks.
-function getConsistentStreak() {
-  const attempts = getAllBillingAttempts()
-    .filter(a => {
-      const st = (a.status || "").toLowerCase();
-      return st === "completed" || st === "success" || st === "paid" || !!a.completed_at;
-    });
-  if (attempts.length === 0) return 0;
-  let streak = 1;
-  for (let i = 0; i < attempts.length - 1; i++) {
-    const d1 = new Date(attempts[i].date || attempts[i].billing_date);
-    const d2 = new Date(attempts[i + 1].date || attempts[i + 1].billing_date);
-    const gap = (d1 - d2) / (1000 * 60 * 60 * 24);
-    if (gap > 210) break;
-    streak++;
-  }
-  return streak;
+function completedOrdersFor(sub) {
+  if (!["active", "paused"].includes((sub.status || "").toLowerCase())) return 0;
+  const renewals = (sub.billing_attempts || []).filter(a => {
+    const status = (a.status || "").toLowerCase();
+    return !!a.completed_at || ["completed", "success", "succeeded", "paid"].includes(status);
+  }).length;
+  return (sub.order_placed ? 1 : 0) + renewals;
 }
 
-// Loyalty tiers: base 20% → 25% at 3 orders → 30% at 6 orders
-// If streak breaks, reset to base 20%
-function getLoyaltyDiscount(streak) {
-  if (streak >= 6) return 30;
-  if (streak >= 3) return 25;
-  return 20; // base discount
+function packageCadence(sub) {
+  const title = (sub.items || []).map(i => i.title || "").join(" ");
+  const initialMonths = /buy\s*3|3\s*pack/i.test(title) ? 5 : /buy\s*2|2\s*pack/i.test(title) ? 3 : 1;
+  const raw = `${sub.delivery_interval || sub.billing_interval || "1 month"}`;
+  const n = Number((raw.match(/\d+/) || [1])[0]);
+  const recurringMonths = /week/i.test(raw) ? Math.max(1, Math.round(n / 4.345)) : Math.max(1, n);
+  return { initialMonths, recurringMonths };
+}
+
+function loyaltyProgram(sub) {
+  const active = ["active", "paused"].includes((sub.status || "").toLowerCase());
+  const orders = active ? completedOrdersFor(sub) : 0;
+  const started = active && sub.order_placed ? new Date(sub.order_placed) : null;
+  const months = started ? Math.max(0, Math.floor((Date.now() - started.getTime()) / 2629800000)) : 0;
+  return { sub, active, orders, months, cadence: packageCadence(sub) };
 }
 
 function renderLoyaltyTracker() {
   if (!state.subs) return "";
-
-  const streak = getConsistentStreak();
-  const currentDiscount = getLoyaltyDiscount(streak);
-  const tier1At = 3, tier2At = 6;
-  const tier1Unlocked = streak >= tier1At;
-  const tier2Unlocked = streak >= tier2At;
-  const progress = Math.min(streak, tier2At);
-  const pct = Math.round((progress / tier2At) * 100);
-
-  // Detect if streak broke and tier needs reset
-  const earnedTier = tier2Unlocked ? 2 : tier1Unlocked ? 1 : 0;
-  if (state.loyaltyTier > earnedTier) {
-    // Streak broke — reset tier and trigger price reset on next render
-    state.loyaltyTier = earnedTier;
-    localStorage.setItem("hb_loyalty_tier", String(earnedTier));
-  }
-
-  // Can they claim a new tier?
-  const canClaimTier1 = tier1Unlocked && state.loyaltyTier < 1;
-  const canClaimTier2 = tier2Unlocked && state.loyaltyTier < 2;
-  const nextClaim = canClaimTier2 ? 2 : canClaimTier1 ? 1 : 0;
-
-  const nextGoal = earnedTier >= 1 ? tier2At : tier1At;
-  const remaining = Math.max(0, nextGoal - streak);
-
-  return `
-    <div class="section" style="margin-top:8px;">
-      <div class="loyalty-card ${earnedTier > 0 ? "unlocked" : ""}">
-        <div class="loyalty-header">
-          <div class="loyalty-icon">${nextClaim ? "🎉" : "🎁"}</div>
-          <div>
-            <div class="loyalty-title">${nextClaim ? "You unlocked a mystery gift!" : "Loyalty Rewards"}</div>
-            <div class="loyalty-sub">${streak} consistent order${streak === 1 ? "" : "s"} · ${currentDiscount}% off · ${remaining > 0 && earnedTier < 2 ? `${remaining} more to next reward` : earnedTier >= 2 ? "Max rewards unlocked!" : ""}</div>
-          </div>
-        </div>
-        <div class="loyalty-bar-bg">
-          <div class="loyalty-bar-fill" style="width:${pct}%"></div>
-        </div>
-        <div class="loyalty-steps">
-          ${[1, 2, 3].map(i => `
-            <div class="loyalty-step ${i <= streak ? "done" : ""}">
-              <div class="step-dot">${i <= streak ? "✓" : i}</div>
-              <div class="step-label">Order ${i}</div>
-            </div>
-          `).join("")}
-          <div class="loyalty-step reward ${tier1Unlocked ? "done" : ""}">
-            <div class="step-dot">${tier1Unlocked ? (state.loyaltyTier >= 1 ? "✓" : "🎁") : "🎁"}</div>
-            <div class="step-label">${state.loyaltyTier >= 1 ? "25% Off" : "Gift 1"}</div>
-          </div>
-          ${[4, 5, 6].map(i => `
-            <div class="loyalty-step ${i <= streak ? "done" : ""}">
-              <div class="step-dot">${i <= streak ? "✓" : i}</div>
-              <div class="step-label">Order ${i}</div>
-            </div>
-          `).join("")}
-          <div class="loyalty-step reward ${tier2Unlocked ? "done" : ""}">
-            <div class="step-dot">${tier2Unlocked ? (state.loyaltyTier >= 2 ? "✓" : "🎁") : "🎁"}</div>
-            <div class="step-label">${state.loyaltyTier >= 2 ? "30% Off" : "Gift 2"}</div>
-          </div>
-        </div>
-
-        ${state.loyaltyTier >= 2 ? `
-          <div class="loyalty-code-box">
-            <div class="loyalty-applied-badge">30% off your subscription</div>
-            <p style="font-size:13px;color:var(--text-muted);margin-top:6px;">Keep your streak to keep this price for life!</p>
-          </div>
-        ` : state.loyaltyTier >= 1 && !canClaimTier2 ? `
-          <div class="loyalty-code-box">
-            <div class="loyalty-applied-badge">25% off your subscription</div>
-            <p style="font-size:13px;color:var(--text-muted);margin-top:6px;">Keep your streak to keep this price for life!</p>
-          </div>
-        ` : ""}
-
-        ${nextClaim ? `
-          <div class="mystery-reveal">
-            <div class="mystery-gift-icon">🎁</div>
-            <div class="mystery-text">You've earned a mystery reward!</div>
-            <button class="btn full" onclick="claimLoyaltyReward(${nextClaim})" ${state.loyaltyClaiming ? "disabled" : ""} style="margin-top:12px;">
-              ${state.loyaltyClaiming ? "Unwrapping your gift…" : "Open Your Gift"}
-            </button>
-          </div>
-        ` : remaining > 0 && state.loyaltyTier < 2 ? `
-          <p class="loyalty-hint">
-            ${streak === 0 ? "Start your streak to unlock mystery rewards!"
-              : remaining === 1 ? "Just 1 more consistent order to unlock your next gift!"
-              : `${remaining} more consistent orders to unlock your next gift`}
-          </p>
-          <p class="loyalty-warn">Miss an order and your discount resets to 20%. Keep your streak alive!</p>
-        ` : ""}
-      </div>
-    </div>
-  `;
+  const programs = state.subs.map(loyaltyProgram);
+  const tile = (done, title, detail) => `<div class="loyalty-step ${done ? "done reward" : ""}"><div class="step-dot">${done ? "✓" : "○"}</div><div class="step-label"><strong>${title}</strong><br>${detail}</div></div>`;
+  return programs.map(p => `<div class="section" style="margin-top:8px;"><div class="loyalty-card ${p.orders >= 2 ? "unlocked" : ""}"><div class="loyalty-header"><div class="loyalty-icon">🎁</div><div><div class="loyalty-title">HealthyBlood Rewards</div><div class="loyalty-sub">${esc(p.sub.items?.[0]?.title || "Subscription")} · ${p.active ? `${p.orders} completed order${p.orders === 1 ? "" : "s"}` : "Rewards reset"}</div></div></div>${p.active ? `<div class="loyalty-bar-bg"><div class="loyalty-bar-fill" style="width:${Math.min(100, p.months / 12 * 100)}%"></div></div><div class="loyalty-steps">${tile(p.orders >= 2,"2 orders","Barcelona vacation entry")}${tile(p.orders >= 4,"4 orders","15% off for life while active")}${tile(p.orders >= 6,"6 orders","Lifetime-rate milestone")}${tile(p.months >= 12,"12 months","Comprehensive blood testing")}</div><p class="loyalty-hint">Your ${p.cadence.initialMonths}-month introductory supply and ${p.cadence.recurringMonths}-month renewal cadence are tracked separately for this package.</p>${p.orders >= 4 ? `<button class="btn full" onclick="claimLoyaltyReward('${p.sub.id}')" ${state.loyaltyClaiming ? "disabled" : ""}>${state.loyaltyClaiming ? "Applying…" : "Activate my lifetime 15% rate"}</button>` : ""}` : `<p class="loyalty-warn">This subscription is no longer active, so its rewards progress has returned to zero.</p>`}</div></div>`).join("");
 }
 
-function claimLoyaltyReward(tier) {
+function claimLoyaltyReward(subscriptionId) {
   state.loyaltyClaiming = true; render();
-  const activeSub = (state.subs || []).find(s => (s.status || "").toLowerCase() === "active");
+  const activeSub = (state.subs || []).find(s => String(s.id) === String(subscriptionId) && ["active","paused"].includes((s.status || "").toLowerCase()));
   if (!activeSub) {
     state.banner = { type: "error", msg: "No active subscription found to apply discount." };
     state.loyaltyClaiming = false; render();
     setTimeout(() => { state.banner = null; render(); }, 4000);
     return;
   }
-  const discountPercent = tier === 2 ? 30 : 25;
-
   fetch(API + "/hb/loyalty-reward", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       subscriptionId: activeSub.id,
-      discountPercent,
       email: state.email,
     }),
   }).then(r => r.json()).then(data => {
     if (data.error) throw new Error(data.error);
-    state.loyaltyTier = tier;
-    localStorage.setItem("hb_loyalty_tier", String(tier));
-    state.banner = { type: "success", msg: `🎉 Gift unlocked: ${discountPercent}% off! Keep your streak to keep this price for life!` };
+    state.banner = { type: "success", msg: "🎉 Your 15% lifetime subscriber rate is active while this subscription remains active." };
     state.loyaltyClaiming = false;
     loadSubs();
     render();
