@@ -623,8 +623,12 @@ app.post("/api/hb/loyalty-reward", async (req, res) => {
       return res.json({ success:true, alreadyApplied:true, discountPercent:17, newPrice:Number(item.price), migrated:true });
     }
     const quantity = Math.max(1, Number(item.quantity || 1));
-    const candidates = [existing.basePrice, item.original_price, ownedSub.items?.[0]?.original_price, item.price, ownedSub.items?.[0]?.price, sub.total_value && Number(sub.total_value) / quantity, ownedSub.total_value && Number(ownedSub.total_value) / quantity, ...(sub.billing_attempts || []).flatMap(a => [a.total_value, a.amount, a.price, a.order_total].map(v => v && Number(v) / quantity))].map(Number).filter(v => Number.isFinite(v) && v > 0);
-    const originalPrice = Math.max(...candidates);
+    const savedBasePrice = Number(notes.hb_loyalty_base || existing.basePrice || 0);
+    const candidates = [item.original_price, ownedSub.items?.[0]?.original_price, item.price, ownedSub.items?.[0]?.price, sub.total_value && Number(sub.total_value) / quantity, ownedSub.total_value && Number(ownedSub.total_value) / quantity, ...(sub.billing_attempts || []).flatMap(a => [a.total_value, a.amount, a.price, a.order_total].map(v => v && Number(v) / quantity))].map(Number).filter(v => Number.isFinite(v) && v > 0);
+    // Once the first loyalty reward is claimed, always calculate future tiers from
+    // that same pre-reward subscription price. A 10% -> 17% upgrade therefore
+    // changes 90% of base to 83% of base: only 7% more of the original base price.
+    const originalPrice = savedBasePrice > 0 ? savedBasePrice : Math.max(...candidates);
     if (!Number.isFinite(originalPrice)) return res.status(409).json({ error: "Unable to recover the original subscription price. No price change was made." });
     const discountedPrice = (originalPrice * (1 - discountPercent / 100)).toFixed(2);
     if (Number(notes.hb_loyalty_tier) === discountPercent) return res.json({ success: true, alreadyApplied: true, discountPercent, newPrice: Number(item.price), originalPrice });
