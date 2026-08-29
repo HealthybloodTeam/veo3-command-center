@@ -365,7 +365,7 @@ app.get("/api/hb/subscriptions", async (req, res) => {
         const entry = loyaltyLedger[String(sub.id)] || {}, notes = rewardNotes(detail);
         const tier = Number(notes.hb_loyalty_tier || entry.tier || 0), base = Number(notes.hb_loyalty_base || entry.basePrice || 0);
         const current = Number((detail.items || sub.items || [])[0]?.price || 0), expected = Number((base * (1 - tier / 100)).toFixed(2));
-        return { ...sub, ...detail, loyalty_applied_tier: tier, loyalty_base_price: base, loyalty_price_valid: tier > 0 && base > 0 && Math.abs(current - expected) < 0.005, vacation_entry_months: String(notes.hb_vacation_entries || (entry.vacationEntries || []).join(",")).split(",").filter(Boolean), blood_test_claimed: notes.hb_blood_test_claimed === "true" || Boolean(entry.bloodTestClaimedAt) };
+        return { ...sub, ...detail, loyalty_applied_tier: tier, loyalty_base_price: base, loyalty_price_valid: tier > 0 && base > 0 && Math.abs(current - expected) < 0.005, vacation_entry_months: String(notes.hb_vacation_entries || (entry.vacationEntries || []).join(",")).split(",").filter(Boolean), blood_test_claimed: notes.hb_blood_test_claimed === "true" || Boolean(entry.bloodTestClaimedAt), payment_recovery_claimed: notes.hb_payment_recovery_claimed === "true" };
       } catch (_) { return sub; }
     }));
     res.json({ subscriptions: detailedSubs });
@@ -741,6 +741,35 @@ app.post("/api/hb/retention-final", async (req, res) => {
     await saveRewardNotes(sub, { hb_retention_free_bottle:"true", hb_exit_reason:String(req.body.reason || "unspecified").slice(0,120), hb_retention_outcome:"deal", hb_exit_recorded_at:new Date().toISOString() }, headers);
     res.json({ success:true, reschedule:scheduleData.payload || scheduleData, gift:giftData.payload || giftData });
   } catch (err) { res.status(500).json({ error: err.message || "Unable to complete the final retention deal." }); }
+});
+
+app.post("/api/hb/payment-recovery", async (req, res) => {
+  try {
+    if (!SEAL_API_TOKEN) return res.status(500).json({ error:"SEAL_API_TOKEN not configured" });
+    const subscriptionId=Number(req.body.subscriptionId), email=String(req.body.email||"").trim().toLowerCase(), date=String(req.body.date||"");
+    if (!subscriptionId || !email) return res.status(400).json({ error:"Subscription and email are required." });
+    if (date && (!/^\d{4}-\d{2}-\d{2}$/.test(date) || new Date(`${date}T23:59:59Z`)<=new Date())) return res.status(400).json({ error:"Choose a valid future delivery date." });
+    const headers={"X-Seal-Token":SEAL_API_TOKEN,"Content-Type":"application/json"};
+    const sr=await fetch(`${SEAL_BASE}/subscriptions?query=${encodeURIComponent(email)}&with-items=true&with-billing-attempts=true`,{headers}), sd=await sr.json();
+    const list=sd.payload?.subscriptions||sd.payload||sd.subscriptions||[], owned=(Array.isArray(list)?list:[list]).find(s=>String(s.id)===String(subscriptionId));
+    if(!owned) return res.status(404).json({error:"Subscription not found."});
+    const dr=await fetch(`${SEAL_BASE}/subscription?id=${encodeURIComponent(subscriptionId)}`,{headers}), dd=await dr.json(), sub={...owned,...(dd.payload||dd)}, notes=rewardNotes(dd.payload||dd);
+    const attempts=(sub.billing_attempts||[]).slice().sort((a,b)=>new Date(b.date||b.billing_date||b.created_at||0)-new Date(a.date||a.billing_date||a.created_at||0));
+    const latest=attempts.find(a=>!["skipped","cancelled","canceled","refunded"].includes(String(a.status||"").toLowerCase()));
+    if(!latest || !["failed","declined","payment_failed","error","insufficient_funds"].includes(String(latest.status||"").toLowerCase())) return res.status(409).json({error:"No unresolved failed payment was found."});
+    if(notes.hb_payment_recovery_claimed==="true") return res.json({success:true,alreadyClaimed:true});
+    const payment=await fetch(`${SEAL_BASE}/subscription`,{method:"PUT",headers,body:JSON.stringify({id:subscriptionId,action:"send_payment_method_update_email"})}), paymentData=await payment.json();
+    if(!payment.ok||paymentData.success===false) return res.status(payment.status||502).json({error:paymentData.error||"Could not send the secure payment-update email."});
+    let reschedule=null;
+    if(date){const upcoming=attempts.find(a=>!a.completed_at&&!["completed","skipped","cancelled","canceled","refunded"].includes(String(a.status||"").toLowerCase()));if(upcoming?.id){const rr=await fetch(`${SEAL_BASE}/subscription-billing-attempt`,{method:"PUT",headers,body:JSON.stringify({id:Number(upcoming.id),subscription_id:subscriptionId,date,time:"09:00",timezone:"+00:00",action:"reschedule",reset_schedule:"true"})});reschedule=await rr.json();if(!rr.ok||reschedule.success===false)return res.status(rr.status||502).json({error:reschedule.error||"The payment email was sent, but the delivery date could not be changed."});}}
+    const item=sub.items?.find(i=>!i.is_one_time_item)||sub.items?.[0];
+    if(!item)return res.status(409).json({error:"The payment email was sent, but no eligible bottle was found."});
+    const gift={product_id:String(item.product_id),variant_id:String(item.variant_id),quantity:"1",title:`Free ${item.title||"HealthyBlood bottle"}`,sku:String(item.sku||item.variant_sku||item.variant_id),price:0,taxable:item.taxable??1,requires_shipping:item.requires_shipping??1,one_time:1};
+    const gr=await fetch(`${SEAL_BASE}/subscription`,{method:"PUT",headers,body:JSON.stringify({id:subscriptionId,action:"add_items",add_items:[gift]})}), gd=await gr.json();
+    if(!gr.ok||gd.success===false)return res.status(gr.status||502).json({error:gd.error||"The payment email was sent, but the free bottle could not be added."});
+    await saveRewardNotes(sub,{hb_payment_recovery_claimed:"true",hb_payment_recovery_at:new Date().toISOString()},headers);
+    res.json({success:true,paymentUpdate:true,reschedule,gift:gd.payload||gd});
+  } catch(err){res.status(500).json({error:err.message||"Unable to complete payment recovery."});}
 });
 
 async function handleReschedule(req, res) {

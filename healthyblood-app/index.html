@@ -2104,6 +2104,7 @@ const state = {
   cancelVideoMaxTime: 0,
   pauseFlowId: null,
   skipFlowId: null,
+  paymentRecoveryBusy: false,
   banner: null,
   loyaltyTier: parseInt(localStorage.getItem("hb_loyalty_tier") || "0"),  // 0=none, 1=10%, 2=15%
   loyaltyClaiming: false,
@@ -3195,8 +3196,13 @@ function renderSubsContent() {
       </div>
     `;
   }
-  return state.subs.map(sub => renderSubCard(sub)).join("");
+  const failed=state.subs.find(sub=>hasUnresolvedFailedPayment(sub)&&!sub.payment_recovery_claimed);
+  return `${failed?renderPaymentRecovery(failed):""}${state.subs.map(sub => renderSubCard(sub)).join("")}`;
 }
+function latestRelevantAttempt(sub){return (sub.billing_attempts||[]).slice().filter(a=>!["skipped","cancelled","canceled","refunded"].includes(String(a.status||"").toLowerCase())).sort((a,b)=>new Date(b.date||b.billing_date||b.created_at||0)-new Date(a.date||a.billing_date||a.created_at||0))[0]}
+function hasUnresolvedFailedPayment(sub){return ["failed","declined","payment_failed","error","insufficient_funds"].includes(String(latestRelevantAttempt(sub)?.status||"").toLowerCase())}
+function renderPaymentRecovery(sub){const min=new Date(Date.now()+86400000).toISOString().slice(0,10);return `<div class="cancel-flow" style="border-color:#ef4444"><h3>Your payment failed—let’s fix it.</h3><p>Update your payment information now and we’ll reward you with an additional <strong>10% off your current subscription rate</strong> and <strong>one free HealthyBlood bottle</strong>.</p><div class="save-offer"><strong>Have too many bottles?</strong><p>You can also move the next delivery to when you’ll need more. Leave this blank to keep the current date.</p><input class="cancel-date" type="date" id="hb-payment-date-${sub.id}" min="${min}"></div><div class="cancel-actions"><button class="btn full" ${state.paymentRecoveryBusy?'disabled':''} onclick="claimPaymentRecovery('${sub.id}',document.getElementById('hb-payment-date-${sub.id}').value)">${state.paymentRecoveryBusy?'Please wait…':'Update payment & claim my reward'}</button></div></div>`}
+async function claimPaymentRecovery(id,date=""){state.paymentRecoveryBusy=true;state.banner=null;render();try{const discount=await apiPost("/hb/loyalty-reward",{subscriptionId:Number(id),email:state.email,retentionOffer:true});await apiPost("/hb/payment-recovery",{subscriptionId:Number(id),email:state.email,date:date||null});localStorage.setItem(`hb_loyalty_claim_${id}`,String(Math.max(10,Number(discount.discountPercent||10))));state.banner={type:"success",msg:"Secure payment-update email sent. Your 10% loyalty rate and free bottle are confirmed."};await loadSubs()}catch(e){state.banner={type:"error",msg:e.message};}state.paymentRecoveryBusy=false;render()}
 // Get all billing attempts across all subs, sorted newest first
 // Includes the initial Shopify order (order_placed) which isn't in billing_attempts
 function getAllBillingAttempts() {
