@@ -2258,8 +2258,19 @@ async function readApiResponse(r) {
   if (!r.ok) throw new Error(data.error || data.message || `Error ${r.status}`);
   return data;
 }
+async function subscriptionFetch(url, options={}) {
+  let lastError;
+  for (let attempt=1; attempt<=3; attempt++) {
+    try { return await fetch(url, options); }
+    catch (error) {
+      lastError=error;
+      if (attempt<3) await new Promise(resolve=>setTimeout(resolve, attempt*900));
+    }
+  }
+  throw new Error("The subscription service connection was interrupted. No duplicate discount will be applied. Please try once more.");
+}
 async function apiPost(path, body) {
-  const r = await fetch(API + path, {
+  const r = await subscriptionFetch(API + path, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
@@ -2270,7 +2281,7 @@ async function apiGet(path) {
   let lastError;
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
-      const r = await fetch(API + path, { cache: "no-store" });
+      const r = await subscriptionFetch(API + path, { cache: "no-store" });
       return await readApiResponse(r);
     } catch (error) {
       lastError = error;
@@ -3665,9 +3676,9 @@ function changeNextDelivery(id, billingAttemptId, date) {
   }).catch(e=>{ state.banner={type:"error",msg:e.message}; state.actionBusy=null; render(); });
 }
 function claimRetentionOffer(id, billingAttemptId=null, date=null) {
+  if (!date) { state.banner={type:"error",msg:"Choose the date when you’ll need more."}; render(); return; }
   state.actionBusy=id; state.banner=null; render();
-  fetch(API + "/hb/loyalty-reward", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({subscriptionId:Number(id),email:state.email,retentionOffer:true}) })
-    .then(async r=>{const d=await r.json();if(!r.ok||d.error)throw new Error(d.error||"Unable to apply the offer");return d;})
+  apiPost("/hb/loyalty-reward", {subscriptionId:Number(id),email:state.email,retentionOffer:true})
     .then(async d=>{ localStorage.setItem(`hb_loyalty_claim_${id}`,String(Math.max(10,Number(d.discountPercent||10)))); if(date) await apiPost(`/hb/subscription/${id}/reschedule`,{billingAttemptId,date}); closeCancelFlow(); state.banner={type:"success",msg:date?"Your lifetime rate is protected and your next delivery date has been changed.":d.alreadyApplied?"Your lifetime loyalty rate is already protected.":"Your additional 10%-off-for-life rate is now locked in."}; state.actionBusy=null; loadSubs(); })
     .catch(e=>{state.banner={type:"error",msg:e.message};state.actionBusy=null;render();});
 }
@@ -3675,9 +3686,7 @@ async function claimFinalRetentionDeal(id, billingAttemptId, date) {
   if (!date) { state.banner={type:"error",msg:"Choose the date when you’ll need more."}; render(); return; }
   state.actionBusy=id; state.banner=null; render();
   try {
-    const discountResponse=await fetch(API+"/hb/loyalty-reward",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({subscriptionId:Number(id),email:state.email,retentionOffer:true})});
-    const discount=await discountResponse.json();
-    if(!discountResponse.ok||discount.error)throw new Error(discount.error||"We could not protect your lifetime rate.");
+    const discount=await apiPost("/hb/loyalty-reward",{subscriptionId:Number(id),email:state.email,retentionOffer:true});
     const deal=await apiPost("/hb/retention-final",{subscriptionId:Number(id),email:state.email,billingAttemptId,date,reason:state.cancelReason||"unspecified"});
     localStorage.setItem(`hb_loyalty_claim_${id}`,String(Math.max(10,Number(discount.discountPercent||10))));
     closeCancelFlow(); state.banner={type:"success",msg:deal.alreadyClaimed?"Your lifetime rate and delivery date are protected; your free bottle was already added.":"Deal accepted: lifetime savings, a new delivery date, and one free bottle are confirmed."}; state.actionBusy=null; loadSubs();
