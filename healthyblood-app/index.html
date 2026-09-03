@@ -2804,7 +2804,7 @@ function viewWelcome() {
     <div class="welcome">
       <div class="welcome-eyebrow">HealthyBlood™</div>
       <h1>Welcome to your <span class="accent">wellness</span> companion.</h1>
-      <p>Build healthy habits, manage your subscription, and chat with Cora — your personal wellness coach.</p>
+      <p>Build healthy habits, explore your loyalty rewards, and chat with Cora — your personal wellness coach.</p>
       <input class="welcome-input" id="welcomeEmail" type="email" placeholder="your@email.com" autocomplete="email">
       <button class="btn full" id="welcomeBtn" style="max-width:340px">Continue</button>
       <p class="welcome-disclaimer">
@@ -3165,8 +3165,8 @@ async function sendChat(text) {
 function viewSubs() {
   return `
     <div class="header">
-      <div class="wordmark">My <span class="accent">Subscription</span></div>
-      <div class="header-greeting">Manage your HealthyBlood deliveries</div>
+      <div class="wordmark">Loyalty <span class="accent">Rewards</span></div>
+      <div class="header-greeting">See your rewards and enter the monthly vacation drawing</div>
     </div>
     <div class="section">
       ${state.banner ? `<div class="${state.banner.type}-banner">${esc(state.banner.msg)}</div>` : ""}
@@ -3181,7 +3181,7 @@ function viewSubs() {
 }
 function renderSubsContent() {
   if (state.subsLoading) {
-    return `<div class="loading-state"><div class="spinner"></div><div>Loading your subscriptions…</div></div>`;
+    return `<div class="loading-state"><div class="spinner"></div><div>Loading your loyalty rewards…</div></div>`;
   }
   if (state.subsError) {
     return `<div class="error-banner">${esc(state.subsError)}</div>
@@ -3197,8 +3197,8 @@ function renderSubsContent() {
       </div>
     `;
   }
-  const failed=state.subs.find(sub=>hasUnresolvedFailedPayment(sub)&&!sub.payment_recovery_claimed);
-  return `${failed?renderPaymentRecovery(failed):""}${state.subs.map(sub => renderSubCard(sub)).join("")}`;
+  // Rewards-only app: subscription controls remain in the web portal.
+  return "";
 }
 function latestRelevantAttempt(sub){return (sub.billing_attempts||[]).slice().filter(a=>!["skipped","cancelled","canceled","refunded"].includes(String(a.status||"").toLowerCase())).sort((a,b)=>new Date(b.date||b.billing_date||b.created_at||0)-new Date(a.date||a.billing_date||a.created_at||0))[0]}
 function hasUnresolvedFailedPayment(sub){return PAYMENT_RECOVERY_PREVIEW||["failed","declined","payment_failed","error","insufficient_funds"].includes(String(latestRelevantAttempt(sub)?.status||"").toLowerCase())}
@@ -3271,7 +3271,7 @@ function renderLoyaltyTracker() {
   if (!state.subs) return "";
   const programs = state.subs.map(loyaltyProgram);
   const tile = (done, title, detail) => `<div class="loyalty-step ${done ? "done reward" : ""}"><div class="step-dot">${done ? "✓" : "○"}</div><div class="step-label"><strong>${title}</strong><br>${detail}</div></div>`;
-  return programs.map(p => { const earned=p.orders>=6?17:p.orders>=4?10:0,total=earned===17?37:earned===10?30:0,claimed=earned>0&&(p.locallyClaimedTier===earned||p.appliedTier===earned); return `<div class="section" style="margin-top:8px;"><div class="loyalty-card ${p.orders >= 2 ? "unlocked" : ""}"><div class="loyalty-header"><div class="loyalty-icon">🎁</div><div><div class="loyalty-title">HealthyBlood Rewards</div><div class="loyalty-sub">${esc(p.sub.items?.[0]?.title || "Subscription")} · ${p.active ? `${p.orders} completed order${p.orders === 1 ? "" : "s"}` : "Rewards reset"}</div></div></div><div class="loyalty-trip" style="background-image:url('/app/assets/calabria-bergamot-experience.png')"><div class="loyalty-trip-copy"><strong>Win the Calabria Bergamot Experience</strong><span>A fully paid luxury-resort stay and private visit to the Italian farms where citrus bergamot originates. Next drawing: <b>${nextRewardDrawing()}</b>. Active eligible members can re-enter every month.</span></div></div>${p.active ? `<div class="loyalty-bar-bg"><div class="loyalty-bar-fill" style="width:${Math.min(100, p.months / 12 * 100)}%"></div></div><div class="loyalty-steps">${tile(p.orders >= 2,"2 orders","One entry in every monthly Calabria drawing")}${tile(p.orders >= 4,"4 orders","30% off for life while your subscription stays active")}${tile(p.orders >= 6,"6 orders","Upgrade to 37% off for life while active")}${tile(p.months >= 12,"12 months","Comprehensive blood testing paid by Reclaime")}</div><p class="loyalty-hint">Your first 20% comes with subscribing. At four orders, your loyalty reward makes this a 30%-off-for-life member benefit; at six orders, it increases to 37% off for life while active. Skips and date changes do not erase progress.</p>${p.orders>=2?`<button class="btn full ghost" onclick="${p.vacationClaimed||!p.entryOpen?'return false':`claimMilestoneReward('${p.sub.id}','vacation_entry')`}" ${state.loyaltyClaiming||p.vacationClaimed||!p.entryOpen?'disabled':''}>${p.vacationClaimed?'Wait until next drawing':p.entryOpen?'Claim this month’s vacation entry':'Entry claiming opens on the 8th'}</button>`:''}${earned ? `<button class="btn full" onclick="${claimed?'return false':`claimLoyaltyReward('${p.sub.id}')`}" ${state.loyaltyClaiming||claimed ? "disabled" : ""}>${state.loyaltyClaiming ? "Applying…" : claimed ? "Wait until next reward" : `Activate my ${total}% off-for-life reward`}</button>` : ""}${p.months>=12?`<button class="btn full ghost" onclick="${p.bloodTestClaimed?'return false':`claimMilestoneReward('${p.sub.id}','blood_test')`}" ${state.loyaltyClaiming||p.bloodTestClaimed?'disabled':''}>${p.bloodTestClaimed?'Wait until next reward':'Claim comprehensive blood testing'}</button>`:''}` : `<p class="loyalty-warn">This subscription is no longer active, so its rewards progress has returned to zero.</p>`}</div></div>`; }).join("");
+  return programs.map(p => { const earned=p.orders>=6?17:p.orders>=4?10:0,total=earned===17?37:earned===10?30:0,claimed=earned>0&&(p.locallyClaimedTier===earned||p.appliedTier===earned); return `<div class="section" style="margin-top:8px;"><div class="loyalty-card ${p.orders >= 2 ? "unlocked" : ""}"><div class="loyalty-header"><div class="loyalty-icon">🎁</div><div><div class="loyalty-title">HealthyBlood Rewards</div><div class="loyalty-sub">${esc(p.sub.items?.[0]?.title || "Subscription")} · ${p.active ? `${p.orders} completed order${p.orders === 1 ? "" : "s"}` : "Rewards reset"}</div></div></div><div class="loyalty-trip" style="background-image:url('/app/assets/calabria-bergamot-experience.png')"><div class="loyalty-trip-copy"><strong>Win the Calabria Bergamot Experience</strong><span>A fully paid luxury-resort stay and private visit to the Italian farms where citrus bergamot originates. Next drawing: <b>${nextRewardDrawing()}</b>. Active eligible members can re-enter every month.</span></div></div>${p.active ? `<div class="loyalty-bar-bg"><div class="loyalty-bar-fill" style="width:${Math.min(100, p.months / 12 * 100)}%"></div></div><div class="loyalty-steps">${tile(p.orders >= 2,"2 orders","One entry in every monthly Calabria drawing")}${tile(p.orders >= 4,"4 orders","30% off for life while your subscription stays active")}${tile(p.orders >= 6,"6 orders","Upgrade to 37% off for life while active")}${tile(p.months >= 12,"12 months","Comprehensive blood testing paid by Reclaime")}</div><p class="loyalty-hint">Your first 20% comes with subscribing. At four orders, your loyalty reward makes this a 30%-off-for-life member benefit; at six orders, it increases to 37% off for life while active. Skips and date changes do not erase progress.</p>${p.orders>=2?`<button class="btn full ghost" onclick="${p.vacationClaimed||!p.entryOpen?'return false':`claimMilestoneReward('${p.sub.id}','vacation_entry')`}" ${state.loyaltyClaiming||p.vacationClaimed||!p.entryOpen?'disabled':''}>${p.vacationClaimed?'Wait until next drawing':p.entryOpen?'Claim this month’s vacation entry':'Entry claiming opens on the 8th'}</button>`:''}${earned ? `<p class="loyalty-hint">${claimed ? "Your loyalty rate is active." : "Your loyalty rate reward is unlocked. Activate it in your subscription portal."}</p>` : ""}${p.months>=12?`<p class="loyalty-hint">${p.bloodTestClaimed?"Your blood testing reward has been claimed.":"Your comprehensive blood testing reward is unlocked."}</p>`:""}}` : `<p class="loyalty-warn">This subscription is no longer active, so its rewards progress has returned to zero.</p>`}</div></div>`; }).join("");
 }
 
 async function claimMilestoneReward(subscriptionId, reward) {
@@ -3922,7 +3922,7 @@ function viewNav() {
     { id: "home",    label: "Today",   icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 12L12 3l9 9M5 10v10h14V10" stroke-linecap="round" stroke-linejoin="round"/></svg>` },
     { id: "chat",    label: "Cora",    icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 21l1.9-5.4A8 8 0 1 1 21 12Z" stroke-linecap="round" stroke-linejoin="round"/></svg>` },
     { id: "health",  label: "Health",  icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.8 1-1a5.5 5.5 0 0 0 0-7.6Z" stroke-linecap="round" stroke-linejoin="round"/></svg>` },
-    { id: "subs",    label: "Plan",    icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 8V21H3V8M1 3h22v5H1zM10 12h4" stroke-linecap="round" stroke-linejoin="round"/></svg>` },
+    { id: "subs",    label: "Rewards",    icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 8V21H3V8M1 3h22v5H1zM10 12h4" stroke-linecap="round" stroke-linejoin="round"/></svg>` },
     { id: "profile", label: "You",     icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0" stroke-linecap="round"/></svg>` },
   ];
   return `
